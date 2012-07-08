@@ -203,7 +203,7 @@ object MathematicaParser {
 
 object FileUtils {
     def readFromFile(file: File): String =
-        Source.fromFile(file).mkString("")
+        Source.fromFile(file).mkString("\n")
 }
 
 object Main extends App {
