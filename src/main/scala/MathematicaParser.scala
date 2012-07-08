@@ -22,8 +22,27 @@ case class Str(value: String) extends Expr {
     def toFullForm = "\"%s\"".format(value.replace("\"", "\\\\\""))
 }
 
-case class Eval(head: String, args: Expr*) extends Expr {
+sealed trait EvalLike extends Expr {
+    val head: String
+    val args: Seq[Expr]
+
     def toFullForm = "%s[%s]".format(head, args.map(_.toFullForm).mkString(", "))
+}
+
+case class Eval(head: String, args: Expr*) extends EvalLike
+
+case class Plus(args: Expr*) extends EvalLike {
+    val head = "Plus"
+}
+case class Times(args: Expr*) extends EvalLike {
+    val head = "Times"
+}
+case class Power(args: Expr*) extends EvalLike {
+    val head = "Power"
+}
+
+object MathematicaImplicits {
+    implicit def intToNum(value: Int): Num = Num(value.toString)
 }
 
 class MathematicaParser extends RegexParsers with PackratParsers {
@@ -43,7 +62,7 @@ class MathematicaParser extends RegexParsers with PackratParsers {
         case value => Str(value.stripPrefix("\"").stripSuffix("\"").replace("\\\\\"", "\""))
     }
 
-    lazy val apply: PackratParser[Eval] = ident ~ "[" ~ repsep(expr, ",") ~ "]" ^^ {
+    lazy val apply: PackratParser[Expr] = ident ~ "[" ~ repsep(expr, ",") ~ "]" ^^ {
         case head ~ "[" ~ args ~ "]" => Eval(head, args: _*)
     }
 
@@ -79,19 +98,19 @@ class MathematicaParser extends RegexParsers with PackratParsers {
     lazy val cmpExpr: PackratParser[Expr] = add | mul | exp | neg | tightest
 
     lazy val add: PackratParser[Expr] = (add | addExpr) ~ ("+" | "-") ~ addExpr ^^ {
-        case lhs ~ "+" ~ rhs => Eval("Plus", lhs, rhs)
+        case lhs ~ "+" ~ rhs => Plus(lhs, rhs)
         case lhs ~ "-" ~ rhs => Eval("Subtract", lhs, rhs)
     }
     lazy val addExpr: PackratParser[Expr] = mul | exp | neg | tightest
 
     lazy val mul: PackratParser[Expr] = (mul | mulExpr) ~ ("*" | "/") ~ mulExpr ^^ {
-        case lhs ~ "*" ~ rhs => Eval("Times", lhs, rhs)
+        case lhs ~ "*" ~ rhs => Times(lhs, rhs)
         case lhs ~ "/" ~ rhs => Eval("Divide", lhs, rhs)
     }
     lazy val mulExpr: PackratParser[Expr] = exp | neg | tightest
 
     lazy val exp: PackratParser[Expr] = (exp | expExpr) ~ "^" ~ expExpr ^^ {
-        case lhs ~ _ ~ rhs => Eval("Power", lhs, rhs)
+        case lhs ~ _ ~ rhs => Power(lhs, rhs)
     }
     lazy val expExpr: PackratParser[Expr] = neg | tightest
 
