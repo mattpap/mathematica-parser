@@ -31,62 +31,32 @@ sealed trait EvalLike extends Expr {
 
 case class Eval(head: String, args: Expr*) extends EvalLike
 
-case class Plus(args: Expr*) extends EvalLike {
-    val head = "Plus"
-}
-case class Subtract(args: Expr*) extends EvalLike {
-    val head = "Subtract"
-}
-case class Times(args: Expr*) extends EvalLike {
-    val head = "Times"
-}
-case class Divide(args: Expr*) extends EvalLike {
-    val head = "Divide"
-}
-case class Power(args: Expr*) extends EvalLike {
-    val head = "Power"
-}
-case class Neg(args: Expr*) extends EvalLike {
-    val head = "Neg"
-}
-case class List(args: Expr*) extends EvalLike {
-    val head = "List"
-}
-case class Or(args: Expr*) extends EvalLike {
-    val head = "Or"
-}
-case class And(args: Expr*) extends EvalLike {
-    val head = "And"
-}
-case class Not(args: Expr*) extends EvalLike {
-    val head = "Not"
-}
-case class Equal(args: Expr*) extends EvalLike {
-    val head = "Equal"
-}
-case class Unequal(args: Expr*) extends EvalLike {
-    val head = "Unequal"
-}
-case class Less(args: Expr*) extends EvalLike {
-    val head = "Less"
-}
-case class Greater(args: Expr*) extends EvalLike {
-    val head = "Greater"
-}
-case class Span(args: Expr*) extends EvalLike {
-    val head = "Span"
-}
-case class Part(args: Expr*) extends EvalLike {
-    val head = "Part"
+sealed trait BuiltinEval extends EvalLike with Product {
+    val head = productPrefix
 }
 
-sealed trait Singleton extends EvalLike {
+case class Plus(args: Expr*) extends BuiltinEval
+case class Subtract(args: Expr*) extends BuiltinEval
+case class Times(args: Expr*) extends BuiltinEval
+case class Divide(args: Expr*) extends BuiltinEval
+case class Power(args: Expr*) extends BuiltinEval
+case class Neg(args: Expr*) extends BuiltinEval
+case class List(args: Expr*) extends BuiltinEval
+case class Or(args: Expr*) extends BuiltinEval
+case class And(args: Expr*) extends BuiltinEval
+case class Not(args: Expr*) extends BuiltinEval
+case class Equal(args: Expr*) extends BuiltinEval
+case class Unequal(args: Expr*) extends BuiltinEval
+case class Less(args: Expr*) extends BuiltinEval
+case class Greater(args: Expr*) extends BuiltinEval
+case class Span(args: Expr*) extends BuiltinEval
+case class Part(args: Expr*) extends BuiltinEval
+
+sealed trait Singleton extends BuiltinEval {
     val args: Seq[Expr] = Nil
 }
 
-case object All extends Singleton {
-    val head = "All"
-}
+case object All extends Singleton
 
 object MathematicaImplicits {
     implicit def intToNum(value: Int): Num = Num(value.toString)

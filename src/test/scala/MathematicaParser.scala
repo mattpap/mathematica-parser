@@ -3,7 +3,7 @@ package org.sympy.parsing.mathematica.tests
 import org.specs2.mutable.Specification
 
 import org.sympy.parsing.mathematica.{MathematicaParser,Expr,Sym,Num,Str,Eval}
-import org.sympy.parsing.mathematica.{Plus,Times,Power}
+import org.sympy.parsing.mathematica.{Plus,Times,Power,All}
 import org.sympy.parsing.mathematica.MathematicaImplicits._
 
 class MathematicaParserSuite extends Specification {
@@ -33,6 +33,15 @@ class MathematicaParserSuite extends Specification {
             "1^2"           ~== Power(1, 2)
             // "1^2^3"         ~== Power(1, Power(2, 3))
             // "1^2^3^4"       ~== Power(1, Power(2, Power(3, 4)))
+        }
+    }
+
+    "Mathematica's language ASTs" should {
+        "Have head attribute matching AST class name" in {
+            Plus(1, 2, 3).head === "Plus"
+            Times(1, 2, 3).head === "Times"
+            Power(1, 2).head === "Power"
+            All.head === "All"
         }
     }
 }
