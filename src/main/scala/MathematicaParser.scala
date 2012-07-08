@@ -53,7 +53,7 @@ case class Span(args: Expr*) extends BuiltinEval
 case class Part(args: Expr*) extends BuiltinEval
 
 sealed trait Singleton extends BuiltinEval {
-    val args: Seq[Expr] = Nil
+    final val args: Seq[Expr] = Nil
 }
 
 case object All extends Singleton
