@@ -7,26 +7,29 @@ import scala.util.parsing.combinator._
 import scala.util.parsing.input.{Positional,Position}
 
 sealed trait Expr {
-    def toFullForm: String
+    def toPrettyForm: String
 }
 
 case class Sym(name: String) extends Expr {
-    def toFullForm = name
+    def toPrettyForm = name
 }
 
 case class Num(value: String) extends Expr {
-    def toFullForm = value
+    def toPrettyForm = value
 }
 
 case class Str(value: String) extends Expr {
-    def toFullForm = "\"%s\"".format(value.replace("\"", "\\\\\""))
+    def toPrettyForm = "\"%s\"".format(value.replace("\"", "\\\\\""))
 }
 
 sealed trait EvalLike extends Expr {
     val head: String
     val args: Seq[Expr]
 
-    def toFullForm = "%s[%s]".format(head, args.map(_.toFullForm).mkString(", "))
+    def toPrettyForm = {
+        val args = this.args.map(_.toPrettyForm).mkString(", ")
+        s"$head[$args]"
+    }
 }
 
 case class Eval(head: String, args: Expr*) extends EvalLike
@@ -54,6 +57,8 @@ case class Part(args: Expr*) extends BuiltinEval
 
 sealed trait Singleton extends BuiltinEval {
     final val args: Seq[Expr] = Nil
+
+    override def toPrettyForm = head
 }
 
 case object All extends Singleton
@@ -174,13 +179,13 @@ sealed trait ParseOutput {
 }
 
 case class ParseResult(expr: Expr) extends ParseOutput {
-    def toPrettyForm = expr.toFullForm
+    def toPrettyForm = expr.toPrettyForm
 }
 
 case class ParseError(msg: String, file: String, pos: Position) extends ParseOutput {
     def message: String = {
         val fileName = (new java.io.File(file)).getName()
-        "%s:%s failure: %s\n\n%s".format(fileName, pos, msg, pos.longString)
+        s"$fileName:$pos failure: $msg\n\n${pos.longString}"
     }
 
     def toPrettyForm = message

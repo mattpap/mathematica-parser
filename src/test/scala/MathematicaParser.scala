@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 
 import org.sympy.parsing.mathematica.{MathematicaParser,ParseResult,ParseError}
 import org.sympy.parsing.mathematica.{Expr,Sym,Num,Str,Eval}
-import org.sympy.parsing.mathematica.{Plus,Times,Power,All,True,False}
+import org.sympy.parsing.mathematica.{Plus,Times,Power,Span,All,True,False}
 import org.sympy.parsing.mathematica.MathematicaImplicits._
 
 class MathematicaParserSuite extends Specification {
@@ -29,6 +29,13 @@ class MathematicaParserSuite extends Specification {
             Times(1, 2, 3).head === "Times"
             Power(1, 2).head === "Power"
             All.head === "All"
+        }
+
+        "Allow to pretty print themselves" in {
+            Plus(1, 2, 3).toPrettyForm === "Plus[1, 2, 3]"
+            Times(1, 2, 3).toPrettyForm === "Times[1, 2, 3]"
+            Plus(1, Power(2, 3)).toPrettyForm === "Plus[1, Power[2, 3]]"
+            Span(1, All).toPrettyForm === "Span[1, All]"
         }
     }
 
