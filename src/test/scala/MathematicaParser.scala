@@ -2,13 +2,16 @@ package org.sympy.parsing.mathematica.tests
 
 import org.specs2.mutable.Specification
 
-import org.sympy.parsing.mathematica.{MathematicaParser,Expr,Sym,Num,Str,Eval}
+import org.sympy.parsing.mathematica.{MathematicaParser,ParseResult,ParseError}
+import org.sympy.parsing.mathematica.{Expr,Sym,Num,Str,Eval}
 import org.sympy.parsing.mathematica.{Plus,Times,Power,All,True,False}
 import org.sympy.parsing.mathematica.MathematicaImplicits._
 
 class MathematicaParserSuite extends Specification {
+    import MathematicaParser.parse
+
     protected implicit class MatchString(input: String) {
-        def ~==(output: Expr) = MathematicaParser.parse(input) === Some(output)
+        def ~==(output: Expr) = parse(input) === ParseResult(output)
     }
 
     "Mathematica's language ASTs" should {
@@ -51,6 +54,16 @@ class MathematicaParserSuite extends Specification {
             "1^2"           ~== Power(1, 2)
             // "1^2^3"         ~== Power(1, Power(2, 3))
             // "1^2^3^4"       ~== Power(1, Power(2, Power(3, 4)))
+        }
+
+        "Deal with errors" in {
+            parse("1 + ") must beLike {
+                case ParseError(msg, file, pos) =>
+                    msg must contain("but end of source found")
+                    file === "<string>"
+                    pos.line === 1
+                    pos.column === 5
+            }
         }
     }
 }

@@ -4,7 +4,7 @@ import java.io.File
 import scala.io.Source
 
 import scala.util.parsing.combinator._
-import scala.util.parsing.input.Positional
+import scala.util.parsing.input.{Positional,Position}
 
 sealed trait Expr {
     def toFullForm: String
@@ -169,19 +169,35 @@ class MathematicaParser extends RegexParsers with PackratParsers {
     lazy val mathematica: PackratParser[Expr] = expr
 }
 
+sealed trait ParseOutput {
+    def toPrettyForm: String
+}
+
+case class ParseResult(expr: Expr) extends ParseOutput {
+    def toPrettyForm = expr.toFullForm
+}
+
+case class ParseError(msg: String, file: String, pos: Position) extends ParseOutput {
+    def message: String = {
+        val fileName = (new java.io.File(file)).getName()
+        "%s:%s failure: %s\n\n%s".format(fileName, pos, msg, pos.longString)
+    }
+
+    def toPrettyForm = message
+}
+
 object MathematicaParser {
-    def parse(source: String, name: String = "<string>"): Option[Expr] = {
+    def parse(source: String, name: String = "<string>"): ParseOutput = {
         val parser = new MathematicaParser
         parser.parseAll(parser.mathematica, source) match {
-            case parser.Success(exprs, _) =>
-                Some(exprs)
+            case parser.Success(expr, _) =>
+                ParseResult(expr)
             case parser.NoSuccess(msg, ctx) =>
-                println(msg)
-                None
+                ParseError(msg, name, ctx.pos)
         }
     }
 
-    def parse(source: File): Option[Expr] =
+    def parse(source: File): ParseOutput =
         parse(FileUtils.readFromFile(source), source.getPath)
 }
 
@@ -192,9 +208,7 @@ object FileUtils {
 
 object Main extends App {
     if (args.length > 0) {
-        val input = args.mkString(" ")
-        val output = MathematicaParser.parse(input)
-        output.foreach(output => println(output.toFullForm))
+        println(MathematicaParser.parse(args.mkString(" ")).toPrettyForm)
     } else {
         println("Nothing to do.")
     }
