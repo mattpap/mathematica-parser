@@ -1,4 +1,4 @@
-package org.sympy
+package org.sympy.parsing.mathematica
 
 import java.io.File
 import scala.io.Source

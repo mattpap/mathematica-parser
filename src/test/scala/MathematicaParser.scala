@@ -1,10 +1,10 @@
-package org.sympy.tests
+package org.sympy.parsing.mathematica.tests
 
 import org.specs2.mutable.Specification
 
-import org.sympy.{MathematicaParser,Expr,Sym,Num,Str,Eval}
-import org.sympy.{Plus,Times,Power}
-import org.sympy.MathematicaImplicits._
+import org.sympy.parsing.mathematica.{MathematicaParser,Expr,Sym,Num,Str,Eval}
+import org.sympy.parsing.mathematica.{Plus,Times,Power}
+import org.sympy.parsing.mathematica.MathematicaImplicits._
 
 class MathematicaParserSuite extends Specification {
     protected class MatchString(input: String) {

@@ -21,7 +21,7 @@ object SymPy extends Build {
 
     lazy val sympySettings = settings ++ Seq(
         libraryDependencies ++= Seq(specs2, jansi),
-        initialCommands := """import org.sympy._"""
+        initialCommands := """import org.sympy.parsing.mathematica._"""
     )
 
     lazy val sympy = Project(id="sympy", base=file(".")) settings(sympySettings: _*)
