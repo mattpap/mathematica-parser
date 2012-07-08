@@ -7,11 +7,9 @@ import org.sympy.parsing.mathematica.{Plus,Times,Power}
 import org.sympy.parsing.mathematica.MathematicaImplicits._
 
 class MathematicaParserSuite extends Specification {
-    protected class MatchString(input: String) {
+    protected implicit class MatchString(input: String) {
         def ~==(output: Expr) = MathematicaParser.parse(input) === Some(output)
     }
-
-    protected implicit def stringToMatchString(value: String): MatchString = new MatchString(value)
 
     "Mathematica's language parser" should {
         "Parse constants" in {
