@@ -3,12 +3,30 @@ package org.sympy.parsing.mathematica.tests
 import org.specs2.mutable.Specification
 
 import org.sympy.parsing.mathematica.{MathematicaParser,Expr,Sym,Num,Str,Eval}
-import org.sympy.parsing.mathematica.{Plus,Times,Power,All}
+import org.sympy.parsing.mathematica.{Plus,Times,Power,All,True,False}
 import org.sympy.parsing.mathematica.MathematicaImplicits._
 
 class MathematicaParserSuite extends Specification {
     protected implicit class MatchString(input: String) {
         def ~==(output: Expr) = MathematicaParser.parse(input) === Some(output)
+    }
+
+    "Mathematica's language ASTs" should {
+        "Support implicit conversions" in {
+            Eval("Some", 17) === Eval("Some", Num("17"))
+            Eval("Some", 1.7) === Eval("Some", Num("1.7"))
+            Eval("Some", "str") === Eval("Some", Str("str"))
+            Eval("Some", 'xyz) === Eval("Some", Sym("xyz"))
+            Eval("Some", true) === Eval("Some", True)
+            Eval("Some", false) === Eval("Some", False)
+        }
+
+        "Have head attribute matching AST class name" in {
+            Plus(1, 2, 3).head === "Plus"
+            Times(1, 2, 3).head === "Times"
+            Power(1, 2).head === "Power"
+            All.head === "All"
+        }
     }
 
     "Mathematica's language parser" should {
@@ -33,15 +51,6 @@ class MathematicaParserSuite extends Specification {
             "1^2"           ~== Power(1, 2)
             // "1^2^3"         ~== Power(1, Power(2, 3))
             // "1^2^3^4"       ~== Power(1, Power(2, Power(3, 4)))
-        }
-    }
-
-    "Mathematica's language ASTs" should {
-        "Have head attribute matching AST class name" in {
-            Plus(1, 2, 3).head === "Plus"
-            Times(1, 2, 3).head === "Times"
-            Power(1, 2).head === "Power"
-            All.head === "All"
         }
     }
 }

@@ -57,9 +57,15 @@ sealed trait Singleton extends BuiltinEval {
 }
 
 case object All extends Singleton
+case object True extends Singleton
+case object False extends Singleton
 
 object MathematicaImplicits {
-    implicit def intToNum(value: Int): Num = Num(value.toString)
+    implicit def intToNum(value: Int): Expr = Num(value.toString)
+    implicit def doubleToNum(value: Double): Expr = Num(value.toString)
+    implicit def stringToStr(value: String): Expr = Str(value)
+    implicit def symbolToSym(value: Symbol): Expr = Sym(value.name)
+    implicit def booleanToBoolean(value: Boolean): Expr = if (value) True else False
 }
 
 class MathematicaParser extends RegexParsers with PackratParsers {
