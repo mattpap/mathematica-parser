@@ -40,6 +40,17 @@ case class Times(args: Expr*) extends EvalLike {
 case class Power(args: Expr*) extends EvalLike {
     val head = "Power"
 }
+case class Span(args: Expr*) extends EvalLike {
+    val head = "Span"
+}
+
+sealed trait Singleton extends EvalLike {
+    val args: Seq[Expr] = Nil
+}
+
+case object All extends Singleton {
+    val head = "All"
+}
 
 object MathematicaImplicits {
     implicit def intToNum(value: Int): Num = Num(value.toString)
@@ -47,6 +58,8 @@ object MathematicaImplicits {
 
 class MathematicaParser extends RegexParsers with PackratParsers {
     protected override val whiteSpace = """(\s|(?m)\(\*(\*(?!/)|[^*])*\*\))+""".r
+
+    import MathematicaImplicits._
 
     lazy val ident: PackratParser[String] = regex("""[a-zA-Z][a-zA-Z0-9]*""".r)
 
@@ -118,6 +131,21 @@ class MathematicaParser extends RegexParsers with PackratParsers {
         case _ ~ expr => Eval("Neg", expr)
     }
     lazy val negExpr: PackratParser[Expr] = tightest
+
+    lazy val part: PackratParser[Expr] = (part | partExpr) ~ "[[" ~ repsep(expr, ",") ~ "]]" ^^ {
+        case expr ~ _ ~ indices ~ _ => Eval("Part", indices: _*)
+    }
+    lazy val partExpr: PackratParser[Expr] = tightest
+
+    lazy val span: PackratParser[Expr] =
+        expr ~ ";;" ~ expr               ^^ { case i ~ _ ~ j         => Span(i, j) }      |
+        expr ~ ";;"                      ^^ { case i ~ _             => Span(i, All) }    |
+               ";;" ~ expr               ^^ { case     _ ~ j         => Span(1, j) }      |
+               ";;"                      ^^ { case     _             => Span(1, All) }    |
+        expr ~ ";;" ~ expr ~ ";;" ~ expr ^^ { case i ~ _ ~ j ~ _ ~ k => Span(i, j, k) }   |
+        expr ~ ";;"        ~ ";;" ~ expr ^^ { case i ~ _     ~ _ ~ k => Span(i, All, k) } |
+               ";;" ~ expr ~ ";;" ~ expr ^^ { case     _ ~ j ~ _ ~ k => Span(1, j, k) }   |
+               ";;" ~        ";;" ~ expr ^^ { case     _     ~ _ ~ k => Span(1, All, k) }
 
     lazy val tightest: PackratParser[Expr] = group | value
 
