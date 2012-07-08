@@ -34,14 +34,50 @@ case class Eval(head: String, args: Expr*) extends EvalLike
 case class Plus(args: Expr*) extends EvalLike {
     val head = "Plus"
 }
+case class Subtract(args: Expr*) extends EvalLike {
+    val head = "Subtract"
+}
 case class Times(args: Expr*) extends EvalLike {
     val head = "Times"
+}
+case class Divide(args: Expr*) extends EvalLike {
+    val head = "Divide"
 }
 case class Power(args: Expr*) extends EvalLike {
     val head = "Power"
 }
+case class Neg(args: Expr*) extends EvalLike {
+    val head = "Neg"
+}
+case class List(args: Expr*) extends EvalLike {
+    val head = "List"
+}
+case class Or(args: Expr*) extends EvalLike {
+    val head = "Or"
+}
+case class And(args: Expr*) extends EvalLike {
+    val head = "And"
+}
+case class Not(args: Expr*) extends EvalLike {
+    val head = "Not"
+}
+case class Equal(args: Expr*) extends EvalLike {
+    val head = "Equal"
+}
+case class Unequal(args: Expr*) extends EvalLike {
+    val head = "Unequal"
+}
+case class Less(args: Expr*) extends EvalLike {
+    val head = "Less"
+}
+case class Greater(args: Expr*) extends EvalLike {
+    val head = "Greater"
+}
 case class Span(args: Expr*) extends EvalLike {
     val head = "Span"
+}
+case class Part(args: Expr*) extends EvalLike {
+    val head = "Part"
 }
 
 sealed trait Singleton extends EvalLike {
@@ -80,45 +116,45 @@ class MathematicaParser extends RegexParsers with PackratParsers {
     }
 
     lazy val list: PackratParser[Expr] = "{" ~ repsep(expr, ",") ~ "}" ^^ {
-        case "{" ~ elems ~ "}" => Eval("List", elems: _*)
+        case "{" ~ elems ~ "}" => List(elems: _*)
     }
 
     lazy val or: PackratParser[Expr] = (or | orExpr) ~ "||" ~ orExpr ^^ {
-        case lhs ~ _ ~ rhs => Eval("Or", lhs, rhs)
+        case lhs ~ _ ~ rhs => Or(lhs, rhs)
     }
     lazy val orExpr: PackratParser[Expr] = and | not | eq | cmp | tightest
 
     lazy val and: PackratParser[Expr] = (and | andExpr) ~ "&&" ~ andExpr ^^ {
-        case lhs ~ _ ~ rhs => Eval("And", lhs, rhs)
+        case lhs ~ _ ~ rhs => And(lhs, rhs)
     }
     lazy val andExpr: PackratParser[Expr] = not | eq | cmp | tightest
 
     lazy val not: PackratParser[Expr] = "!" ~ (not | notExpr) ^^ {
-        case _ ~ expr => Eval("Not", expr)
+        case _ ~ expr => Not(expr)
     }
     lazy val notExpr: PackratParser[Expr] = eq | cmp | tightest
 
     lazy val eq: PackratParser[Expr] =  (eq | eqExpr) ~ ("==" | "!=") ~ eqExpr ^^ {
-        case lhs ~ "==" ~ rhs => Eval("Equal", lhs, rhs)
-        case lhs ~ "!=" ~ rhs => Eval("Unequal", lhs, rhs)
+        case lhs ~ "==" ~ rhs => Equal(lhs, rhs)
+        case lhs ~ "!=" ~ rhs => Unequal(lhs, rhs)
     }
     lazy val eqExpr: PackratParser[Expr] = cmp | add | mul | exp | neg | tightest
 
     lazy val cmp: PackratParser[Expr] = (cmp | cmpExpr) ~ ("<" | ">") ~ cmpExpr ^^ {
-        case lhs ~ "<" ~ rhs => Eval("Less", lhs, rhs)
-        case lhs ~ ">" ~ rhs => Eval("Greater", lhs, rhs)
+        case lhs ~ "<" ~ rhs => Less(lhs, rhs)
+        case lhs ~ ">" ~ rhs => Greater(lhs, rhs)
     }
     lazy val cmpExpr: PackratParser[Expr] = add | mul | exp | neg | tightest
 
     lazy val add: PackratParser[Expr] = (add | addExpr) ~ ("+" | "-") ~ addExpr ^^ {
         case lhs ~ "+" ~ rhs => Plus(lhs, rhs)
-        case lhs ~ "-" ~ rhs => Eval("Subtract", lhs, rhs)
+        case lhs ~ "-" ~ rhs => Subtract(lhs, rhs)
     }
     lazy val addExpr: PackratParser[Expr] = mul | exp | neg | tightest
 
     lazy val mul: PackratParser[Expr] = (mul | mulExpr) ~ ("*" | "/") ~ mulExpr ^^ {
         case lhs ~ "*" ~ rhs => Times(lhs, rhs)
-        case lhs ~ "/" ~ rhs => Eval("Divide", lhs, rhs)
+        case lhs ~ "/" ~ rhs => Divide(lhs, rhs)
     }
     lazy val mulExpr: PackratParser[Expr] = exp | neg | tightest
 
@@ -128,12 +164,12 @@ class MathematicaParser extends RegexParsers with PackratParsers {
     lazy val expExpr: PackratParser[Expr] = neg | tightest
 
     lazy val neg: PackratParser[Expr] = "-" ~ (neg | negExpr) ^^ {
-        case _ ~ expr => Eval("Neg", expr)
+        case _ ~ expr => Neg(expr)
     }
     lazy val negExpr: PackratParser[Expr] = tightest
 
     lazy val part: PackratParser[Expr] = (part | partExpr) ~ "[[" ~ repsep(expr, ",") ~ "]]" ^^ {
-        case expr ~ _ ~ indices ~ _ => Eval("Part", indices: _*)
+        case expr ~ _ ~ indices ~ _ => Part(indices: _*)
     }
     lazy val partExpr: PackratParser[Expr] = tightest
 
