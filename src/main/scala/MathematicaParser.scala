@@ -45,27 +45,28 @@ sealed trait Singleton extends Builtin {
 }
 
 object Builtins {
-    case class Plus(args: Expr*) extends Builtin
-    case class Subtract(args: Expr*) extends Builtin
-    case class Times(args: Expr*) extends Builtin
-    case class Divide(args: Expr*) extends Builtin
-    case class Power(args: Expr*) extends Builtin
-    case class List(args: Expr*) extends Builtin
-    case class Or(args: Expr*) extends Builtin
-    case class And(args: Expr*) extends Builtin
-    case class Not(args: Expr*) extends Builtin
-    case class Equal(args: Expr*) extends Builtin
-    case class Unequal(args: Expr*) extends Builtin
-    case class Less(args: Expr*) extends Builtin
-    case class Greater(args: Expr*) extends Builtin
-    case class Rule(args: Expr*) extends Builtin
-    case class ReplaceAll(args: Expr*) extends Builtin
+    case class CompoundExpression(args: Expr*) extends Builtin
     case class Set(args: Expr*) extends Builtin
     case class SetDelayed(args: Expr*) extends Builtin
     case class AddTo(args: Expr*) extends Builtin
     case class SubtractFrom(args: Expr*) extends Builtin
     case class TimesBy(args: Expr*) extends Builtin
     case class DivideBy(args: Expr*) extends Builtin
+    case class ReplaceAll(args: Expr*) extends Builtin
+    case class Rule(args: Expr*) extends Builtin
+    case class Less(args: Expr*) extends Builtin
+    case class Greater(args: Expr*) extends Builtin
+    case class Equal(args: Expr*) extends Builtin
+    case class Unequal(args: Expr*) extends Builtin
+    case class Or(args: Expr*) extends Builtin
+    case class And(args: Expr*) extends Builtin
+    case class Not(args: Expr*) extends Builtin
+    case class Plus(args: Expr*) extends Builtin
+    case class Subtract(args: Expr*) extends Builtin
+    case class Times(args: Expr*) extends Builtin
+    case class Divide(args: Expr*) extends Builtin
+    case class Power(args: Expr*) extends Builtin
+    case class List(args: Expr*) extends Builtin
     case class Span(args: Expr*) extends Builtin
     case class Part(args: Expr*) extends Builtin
     case class Exp(args: Expr*) extends Builtin
@@ -73,6 +74,7 @@ object Builtins {
 
 object Singletons {
     case object All extends Singleton
+    case object Null extends Singleton
     case object True extends Singleton
     case object False extends Singleton
 }
@@ -116,11 +118,35 @@ class MathematicaParser extends RegexParsers with PackratParsers {
     }
 
     lazy val expr: PackratParser[Expr] =
-        // Precedence in increasing order (->):
-        // r         l      r                                              r
-        assing | replace | rule | or | and | not | eq | cmp | add | mul | exp | neg | tightest
+        // Precedence in increasing order:
+        compound | // flat
+        assign   | // right group
+        replace  | // left group
+        rule     | // right group
+        or       | // TODO
+        and      | // TODO
+        not      | // unary, prefix
+        eq       | // TODO
+        cmp      | // TODO
+        add      | // TODO flat
+        mul      | // TODO
+        exp      | // right group
+        neg      | // unary, prefix
+        tightest
 
-    lazy val assing: PackratParser[Expr] = assingExpr ~ ("=" | ":=" | "+=" | "-=" | "*=" | "/=") ~ (assing | assingExpr) ^^ {
+    lazy val compound: PackratParser[Expr] = complexCompound | simpleCompound
+    lazy val complexCompound: PackratParser[Expr] = compoundExpr ~ ";" ~ rep1sep(compoundExpr, ";") ~ opt(";") ^^ {
+        case elem ~ _ ~ elems ~ None =>
+            Builtins.CompoundExpression(elem :: elems: _*)
+        case elem ~ _ ~ elems ~ _ =>
+            Builtins.CompoundExpression((elem :: elems) :+ Singletons.Null: _*)
+    }
+    lazy val simpleCompound: PackratParser[Expr] = compoundExpr ~ ";" ^^ {
+        case elem ~ _ => Builtins.CompoundExpression(elem, Singletons.Null)
+    }
+    lazy val compoundExpr: PackratParser[Expr] = assign | replace | rule | or | and | not | eq | cmp | add | mul | exp | neg | tightest
+
+    lazy val assign: PackratParser[Expr] = assignExpr ~ ("=" | ":=" | "+=" | "-=" | "*=" | "/=") ~ (assign | assignExpr) ^^ {
         case lhs ~  "=" ~ rhs => Builtins.Set(lhs, rhs)
         case lhs ~ ":=" ~ rhs => Builtins.SetDelayed(lhs, rhs)
         case lhs ~ "+=" ~ rhs => Builtins.AddTo(lhs, rhs)
@@ -128,7 +154,7 @@ class MathematicaParser extends RegexParsers with PackratParsers {
         case lhs ~ "*=" ~ rhs => Builtins.TimesBy(lhs, rhs)
         case lhs ~ "/=" ~ rhs => Builtins.DivideBy(lhs, rhs)
     }
-    lazy val assingExpr: PackratParser[Expr] = replace | rule | or | and | not | eq | cmp | add | mul | exp | neg | tightest
+    lazy val assignExpr: PackratParser[Expr] = replace | rule | or | and | not | eq | cmp | add | mul | exp | neg | tightest
 
     lazy val replace: PackratParser[Expr] = (replace | replaceExpr) ~ "/." ~ replaceExpr ^^ {
         case lhs ~ _ ~ rhs => Builtins.ReplaceAll(lhs, rhs)

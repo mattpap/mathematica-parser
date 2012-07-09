@@ -179,6 +179,22 @@ class MathematicaParserSuite extends Specification {
                     TimesBy(Plus('e, 5), DivideBy(Plus('f, 6), Plus('g, 7)))))))
         }
 
+        "Parse compound expressions: a; b; c" in {
+            "x = 1"                ~== Set('x, 1)
+            "x = 1;"               ~== CompoundExpression(Set('x, 1), Null)
+            "x = 1; y = 2"         ~== CompoundExpression(Set('x, 1), Set('y, 2))
+            "x = 1; y = 2;"        ~== CompoundExpression(Set('x, 1), Set('y, 2), Null)
+            "x = 1; y = 2; z = 3"  ~== CompoundExpression(Set('x, 1), Set('y, 2), Set('z, 3))
+            "x = 1; y = 2; z = 3;" ~== CompoundExpression(Set('x, 1), Set('y, 2), Set('z, 3), Null)
+
+            "(x; y); z; t"         ~== CompoundExpression(CompoundExpression('x, 'y), 'z, 't)
+            "x; (y; z); t"         ~== CompoundExpression('x, CompoundExpression('y, 'z), 't)
+            "x; y; (z; t)"         ~== CompoundExpression('x, 'y, CompoundExpression('z, 't))
+
+            "(x; y) z; t"          ~== CompoundExpression(Times(CompoundExpression('x, 'y), 'z), 't)
+            "(x; y;) z; t"         ~== CompoundExpression(Times(CompoundExpression('x, 'y, Null), 'z), 't)
+        }
+
         "Deal with errors" in {
             parse("1 + ") must beLike {
                 case ParseError(msg, file, pos) =>
