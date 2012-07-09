@@ -139,7 +139,7 @@ class MathematicaParser extends RegexParsers with PackratParsers {
     }
     lazy val mulExpr: PackratParser[Expr] = exp | neg | tightest
 
-    lazy val exp: PackratParser[Expr] = (exp | expExpr) ~ "^" ~ expExpr ^^ {
+    lazy val exp: PackratParser[Expr] = expExpr ~ "^" ~ (exp | expExpr) ^^ {
         case lhs ~ _ ~ rhs => Power(lhs, rhs)
     }
     lazy val expExpr: PackratParser[Expr] = neg | tightest

@@ -58,9 +58,17 @@ class MathematicaParserSuite extends Specification {
             "1 * 2 + 3"     ~== Plus(Times(1, 2), 3)
             "(1 * 2) + 3"   ~== Plus(Times(1, 2), 3)
             "1 * (2 + 3)"   ~== Times(1, Plus(2, 3))
+        }
+
+        "Parse exponentials" in {
             "1^2"           ~== Power(1, 2)
-            // "1^2^3"         ~== Power(1, Power(2, 3))
-            // "1^2^3^4"       ~== Power(1, Power(2, Power(3, 4)))
+            "1^2^3"         ~== Power(1, Power(2, 3))
+            "1^2^3^4"       ~== Power(1, Power(2, Power(3, 4)))
+            "(1^2)^3^4"     ~== Power(Power(1, 2), Power(3, 4))
+            "1^(2^3)^4"     ~== Power(1, Power(Power(2, 3), 4))
+            "1^2^(3^4)"     ~== Power(1, Power(2, Power(3, 4)))
+            "(1^2^3)^4"     ~== Power(Power(1, Power(2, 3)), 4)
+            "1^(2^3^4)"     ~== Power(1, Power(2, Power(3, 4)))
         }
 
         "Deal with errors" in {
