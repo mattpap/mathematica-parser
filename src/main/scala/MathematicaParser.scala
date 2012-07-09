@@ -30,6 +30,11 @@ sealed trait EvalLike extends Expr {
         val args = this.args.map(_.toPrettyForm).mkString(", ")
         s"$head[$args]"
     }
+
+    override def toString: String = {
+        val args = this.args.map(_.toString).mkString(", ")
+        s"$head($args)"
+    }
 }
 
 case class Eval(head: String, args: Expr*) extends EvalLike
@@ -42,6 +47,7 @@ sealed trait Singleton extends Builtin {
     final val args: Seq[Expr] = Nil
 
     override def toPrettyForm = head
+    override def toString = head
 }
 
 object Builtins {

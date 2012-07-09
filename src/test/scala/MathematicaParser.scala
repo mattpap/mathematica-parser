@@ -35,9 +35,16 @@ class MathematicaParserSuite extends Specification {
 
         "Allow to pretty print themselves" in {
             Plus(1, 2, 3).toPrettyForm === "Plus[1, 2, 3]"
-            Times(1, 2, 3).toPrettyForm === "Times[1, 2, 3]"
+            Plus('x, 'y, 'z).toPrettyForm === "Plus[x, y, z]"
             Plus(1, Power(2, 3)).toPrettyForm === "Plus[1, Power[2, 3]]"
             Span(1, All).toPrettyForm === "Span[1, All]"
+        }
+
+        "Have produce readable output from toString" in {
+            Plus(1, 2, 3).toString === "Plus(Num(1), Num(2), Num(3))"
+            Plus('x, 'y, 'z).toString === "Plus(Sym(x), Sym(y), Sym(z))"
+            Plus(1, Power(2, 3)).toString === "Plus(Num(1), Power(Num(2), Num(3)))"
+            Span(1, All).toString === "Span(Num(1), All)"
         }
     }
 
