@@ -135,6 +135,22 @@ class MathematicaParserSuite extends Specification {
             "-x^(-y^-z^-t)" ~== Times(-1, Power('x, Times(-1, Power('y, Times(-1, Power('z, Times(-1, 't)))))))
         }
 
+        "Parse rules" in {
+            "x -> y"                 ~== Rule('x, 'y)
+            "x -> y -> z"            ~== Rule('x, Rule('y, 'z))
+            "(x -> y) -> z"          ~== Rule(Rule('x, 'y), 'z)
+            "x -> (y -> z)"          ~== Rule('x, Rule('y, 'z))
+            "x -> y -> z -> t"       ~== Rule('x, Rule('y, Rule('z, 't)))
+            "(x -> y) -> z -> t"     ~== Rule(Rule('x, 'y), Rule('z, 't))
+            "x -> (y -> z) -> t"     ~== Rule('x, Rule(Rule('y, 'z), 't))
+            "x -> y -> (z -> t)"     ~== Rule('x, Rule('y, Rule('z, 't)))
+            "(x -> y -> z) -> t"     ~== Rule(Rule('x, Rule('y, 'z)), 't)
+            "x -> (y -> z -> t)"     ~== Rule('x, Rule('y, Rule('z, 't)))
+            "-x -> y + z -> 3*t"     ~== Rule(Times(-1, 'x), Rule(Plus('y, 'z), Times(3, 't)))
+            "x -> y || z -> t"       ~== Rule('x, Rule(Or('y, 'z), 't))
+            "(x -> y) || (z -> t)"   ~== Or(Rule('x, 'y), Rule('z, 't))
+        }
+
         "Deal with errors" in {
             parse("1 + ") must beLike {
                 case ParseError(msg, file, pos) =>

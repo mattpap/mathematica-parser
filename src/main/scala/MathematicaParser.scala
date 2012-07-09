@@ -58,6 +58,7 @@ object Builtins {
     case class Unequal(args: Expr*) extends Builtin
     case class Less(args: Expr*) extends Builtin
     case class Greater(args: Expr*) extends Builtin
+    case class Rule(args: Expr*) extends Builtin
     case class Span(args: Expr*) extends Builtin
     case class Part(args: Expr*) extends Builtin
     case class Exp(args: Expr*) extends Builtin
@@ -106,6 +107,16 @@ class MathematicaParser extends RegexParsers with PackratParsers {
     lazy val list: PackratParser[Expr] = "{" ~ repsep(expr, ",") ~ "}" ^^ {
         case "{" ~ elems ~ "}" => Builtins.List(elems: _*)
     }
+
+    lazy val expr: PackratParser[Expr] =
+        // Precedence in increasing order (->):
+        // r                                            r
+        rule | or | and | not | eq | cmp | add | mul | exp | neg | tightest
+
+    lazy val rule: PackratParser[Expr] = ruleExpr ~ "->" ~ (rule | ruleExpr) ^^ {
+        case lhs ~ _ ~ rhs => Builtins.Rule(lhs, rhs)
+    }
+    lazy val ruleExpr: PackratParser[Expr] = or | and | not | eq | cmp | add | mul | exp | neg | tightest
 
     lazy val or: PackratParser[Expr] = (or | orExpr) ~ "||" ~ orExpr ^^ {
         case lhs ~ _ ~ rhs => Builtins.Or(lhs, rhs)
@@ -180,8 +191,6 @@ class MathematicaParser extends RegexParsers with PackratParsers {
 
     lazy val group: PackratParser[Expr] = "(" ~> expr <~ ")"
     lazy val value: PackratParser[Expr] = apply | list | symbol | number | str
-
-    lazy val expr: PackratParser[Expr] = or | and | not | eq | cmp | add | mul | exp | neg | tightest
 
     lazy val mathematica: PackratParser[Expr] = expr
 }
