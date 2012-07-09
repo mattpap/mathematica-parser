@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 
 import org.sympy.parsing.mathematica.{MathematicaParser,ParseResult,ParseError}
 import org.sympy.parsing.mathematica.{Expr,Sym,Num,Str,Eval}
-import org.sympy.parsing.mathematica.{Plus,Times,Power,Span,All,True,False}
+import org.sympy.parsing.mathematica.{Plus,Times,Power,Exp,Span,All,True,False}
 import org.sympy.parsing.mathematica.MathematicaImplicits._
 
 class MathematicaParserSuite extends Specification {
@@ -58,7 +58,7 @@ class MathematicaParserSuite extends Specification {
             "-\"abc\"" ~== Times(-1, Str("abc"))
         }
 
-        "Parse arithmetics" in {
+        "Parse mixed arithmetics" in {
             "1 + 2"         ~== Plus(1, 2)
             "1 + 2 + 3"     ~== Plus(Plus(1, 2), 3)
             "1 + 2 + 3 + 4" ~== Plus(Plus(Plus(1, 2), 3), 4)
@@ -71,6 +71,28 @@ class MathematicaParserSuite extends Specification {
             "1 * 2 + 3"     ~== Plus(Times(1, 2), 3)
             "(1 * 2) + 3"   ~== Plus(Times(1, 2), 3)
             "1 * (2 + 3)"   ~== Times(1, Plus(2, 3))
+        }
+
+        "Parse explicit and implied multiplication" in {
+            "127 * x"       ~== Times(127, 'x)
+            "127*x"         ~== Times(127, 'x)
+            "127 x"         ~== Times(127, 'x)
+            "127x"          ~== Times(127, 'x)
+            "x*y"           ~== Times('x, 'y)
+            "x y"           ~== Times('x, 'y)
+            "xy"            ~== 'xy
+            "xy z"          ~== Times('xy, 'z)
+            "x*y*z"         ~== Times(Times('x, 'y), 'z)
+            "x y z"         ~== Times(Times('x, 'y), 'z)
+            "-x y z"        ~== Times(Times(Times(-1, 'x), 'y), 'z)
+            "-x -y z"       ~== Times(Times(Times(-1, 'x), Times(-1, 'y)), 'z)
+            "-x -y -z"      ~== Times(Times(Times(-1, 'x), Times(-1, 'y)), Times(-1, 'z))
+            "-127*Exp[x]"   ~== Times(-127, Exp('x))
+            "-127 Exp[x]"   ~== Times(-127, Exp('x))
+            "-127Exp[x]"    ~== Times(-127, Exp('x))
+            "Exp[x]*Exp[y]" ~== Times(Exp('x), Exp('y))
+            "Exp[x] Exp[y]" ~== Times(Exp('x), Exp('y))
+            "Exp[x]Exp[y]"  ~== Times(Exp('x), Exp('y))
         }
 
         "Parse exponentials" in {

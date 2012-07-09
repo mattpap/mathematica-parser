@@ -53,6 +53,7 @@ case class Less(args: Expr*) extends BuiltinEval
 case class Greater(args: Expr*) extends BuiltinEval
 case class Span(args: Expr*) extends BuiltinEval
 case class Part(args: Expr*) extends BuiltinEval
+case class Exp(args: Expr*) extends BuiltinEval
 
 sealed trait Singleton extends BuiltinEval {
     final val args: Seq[Expr] = Nil
@@ -91,8 +92,10 @@ class MathematicaParser extends RegexParsers with PackratParsers {
         case value => Str(value.stripPrefix("\"").stripSuffix("\"").replace("\\\\\"", "\""))
     }
 
-    lazy val apply: PackratParser[Expr] = ident ~ "[" ~ repsep(expr, ",") ~ "]" ^^ {
-        case head ~ "[" ~ args ~ "]" => Eval(head, args: _*)
+    lazy val apply: PackratParser[Expr] = ident ~ ("[" ~> repsep(expr, ",") <~ "]") ^^ {
+        // TODO: this has to be automated (e.g. with reflection)
+        case "Exp" ~ args => Exp(args: _*)
+        case head  ~ args => Eval(head, args: _*)
     }
 
     lazy val list: PackratParser[Expr] = "{" ~ repsep(expr, ",") ~ "}" ^^ {
@@ -132,7 +135,11 @@ class MathematicaParser extends RegexParsers with PackratParsers {
     }
     lazy val addExpr: PackratParser[Expr] = mul | exp | neg | tightest
 
-    lazy val mul: PackratParser[Expr] = (mul | mulExpr) ~ ("*" | "/") ~ mulExpr ^^ {
+    lazy val mul: PackratParser[Expr] = mulImplied | mulExplicit
+    lazy val mulImplied: PackratParser[Expr] = (mul | mulExpr) ~ mulExpr ^^ {
+        case lhs ~ rhs  => Times(lhs, rhs)
+    }
+    lazy val mulExplicit: PackratParser[Expr] = (mul | mulExpr) ~ ("*" | "/") ~ mulExpr ^^ {
         case lhs ~ "*" ~ rhs => Times(lhs, rhs)
         case lhs ~ "/" ~ rhs => Divide(lhs, rhs)
     }
