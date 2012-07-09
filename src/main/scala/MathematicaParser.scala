@@ -34,7 +34,7 @@ sealed trait EvalLike extends Expr {
 
 case class Eval(head: String, args: Expr*) extends EvalLike
 
-sealed trait BuiltinEval extends EvalLike with Product {
+sealed trait BuiltinEval extends EvalLike with scala.Product {
     val head = productPrefix
 }
 
