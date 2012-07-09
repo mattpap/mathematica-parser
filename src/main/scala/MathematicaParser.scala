@@ -73,6 +73,7 @@ object Builtins {
     case class Exp(args: Expr*) extends Builtin
     case class Factorial(args: Expr*) extends Builtin
     case class Factorial2(args: Expr*) extends Builtin
+    case class Out(args: Expr*) extends Builtin
 }
 
 object Singletons {
@@ -108,6 +109,15 @@ class MathematicaParser extends RegexParsers with PackratParsers {
 
     lazy val str: PackratParser[Str] = ("\"" + """(\\.|[^"])*""" + "\"").r ^^ {
         case value => Str(value.stripPrefix("\"").stripSuffix("\"").replace("\\\\\"", "\""))
+    }
+
+    lazy val out: PackratParser[Expr] = outNumber | outClassic
+    lazy val outNumber: PackratParser[Expr] = "%\\d+".r ^^ {
+        case value => Builtins.Out(Num(value.stripPrefix("%")))
+    }
+    lazy val outClassic: PackratParser[Expr] = "%+".r ^^ {
+        case "%"   => Builtins.Out()
+        case value => Builtins.Out(Num(s"-${value.length}"))
     }
 
     lazy val apply: PackratParser[Expr] = ident ~ ("[" ~> repsep(expr, ",") <~ "]") ^^ {
@@ -268,7 +278,7 @@ class MathematicaParser extends RegexParsers with PackratParsers {
     lazy val tightest: PackratParser[Expr] = group | value
 
     lazy val group: PackratParser[Expr] = "(" ~> expr <~ ")"
-    lazy val value: PackratParser[Expr] = apply | list | symbol | number | str
+    lazy val value: PackratParser[Expr] = apply | list | out | symbol | number | str
 
     lazy val mathematica: PackratParser[Expr] = expr
 }

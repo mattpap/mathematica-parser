@@ -248,6 +248,18 @@ class MathematicaParserSuite extends Specification {
             "x -> y === z -> t"           ~== Rule('x, Rule(SameQ('y, 'z), 't))
         }
 
+        "Parse output references: %, %%, %%%, %n" in {
+            "%"          ~== Out()
+            "%%"         ~== Out(-2)
+            "%%%"        ~== Out(-3)
+            "%0"         ~== Out(0)
+            "%1"         ~== Out(1)
+            "%127"       ~== Out(127)
+            "% + 123"    ~== Plus(Out(), 123)
+            "2*%%%"      ~== Times(2, Out(-3))
+            "%17!"       ~== Factorial(Out(17))
+        }
+
         "Deal with errors" in {
             parse("1 + ") must beLike {
                 case ParseError(msg, file, pos) =>
