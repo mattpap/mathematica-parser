@@ -34,49 +34,54 @@ sealed trait EvalLike extends Expr {
 
 case class Eval(head: String, args: Expr*) extends EvalLike
 
-sealed trait BuiltinEval extends EvalLike with scala.Product {
+sealed trait Builtin extends EvalLike with scala.Product {
     val head = productPrefix
 }
 
-case class Plus(args: Expr*) extends BuiltinEval
-case class Subtract(args: Expr*) extends BuiltinEval
-case class Times(args: Expr*) extends BuiltinEval
-case class Divide(args: Expr*) extends BuiltinEval
-case class Power(args: Expr*) extends BuiltinEval
-case class List(args: Expr*) extends BuiltinEval
-case class Or(args: Expr*) extends BuiltinEval
-case class And(args: Expr*) extends BuiltinEval
-case class Not(args: Expr*) extends BuiltinEval
-case class Equal(args: Expr*) extends BuiltinEval
-case class Unequal(args: Expr*) extends BuiltinEval
-case class Less(args: Expr*) extends BuiltinEval
-case class Greater(args: Expr*) extends BuiltinEval
-case class Span(args: Expr*) extends BuiltinEval
-case class Part(args: Expr*) extends BuiltinEval
-case class Exp(args: Expr*) extends BuiltinEval
-
-sealed trait Singleton extends BuiltinEval {
+sealed trait Singleton extends Builtin {
     final val args: Seq[Expr] = Nil
 
     override def toPrettyForm = head
 }
 
-case object All extends Singleton
-case object True extends Singleton
-case object False extends Singleton
+object Builtins {
+    case class Plus(args: Expr*) extends Builtin
+    case class Subtract(args: Expr*) extends Builtin
+    case class Times(args: Expr*) extends Builtin
+    case class Divide(args: Expr*) extends Builtin
+    case class Power(args: Expr*) extends Builtin
+    case class List(args: Expr*) extends Builtin
+    case class Or(args: Expr*) extends Builtin
+    case class And(args: Expr*) extends Builtin
+    case class Not(args: Expr*) extends Builtin
+    case class Equal(args: Expr*) extends Builtin
+    case class Unequal(args: Expr*) extends Builtin
+    case class Less(args: Expr*) extends Builtin
+    case class Greater(args: Expr*) extends Builtin
+    case class Span(args: Expr*) extends Builtin
+    case class Part(args: Expr*) extends Builtin
+    case class Exp(args: Expr*) extends Builtin
+}
 
-object MathematicaImplicits {
+object Singletons {
+    case object All extends Singleton
+    case object True extends Singleton
+    case object False extends Singleton
+}
+
+object Implicits {
     implicit def intToNum(value: Int): Expr = Num(value.toString)
     implicit def doubleToNum(value: Double): Expr = Num(value.toString)
     implicit def stringToStr(value: String): Expr = Str(value)
     implicit def symbolToSym(value: Symbol): Expr = Sym(value.name)
-    implicit def booleanToBoolean(value: Boolean): Expr = if (value) True else False
+    implicit def booleanToBoolean(value: Boolean): Expr =
+        if (value) Singletons.True else Singletons.False
 }
 
 class MathematicaParser extends RegexParsers with PackratParsers {
     protected override val whiteSpace = """(\s|(?m)\(\*(\*(?!/)|[^*])*\*\))+""".r
 
-    import MathematicaImplicits._
+    import Implicits._
 
     lazy val ident: PackratParser[String] = regex("""[a-zA-Z][a-zA-Z0-9]*""".r)
 
@@ -94,82 +99,82 @@ class MathematicaParser extends RegexParsers with PackratParsers {
 
     lazy val apply: PackratParser[Expr] = ident ~ ("[" ~> repsep(expr, ",") <~ "]") ^^ {
         // TODO: this has to be automated (e.g. with reflection)
-        case "Exp" ~ args => Exp(args: _*)
+        case "Exp" ~ args => Builtins.Exp(args: _*)
         case head  ~ args => Eval(head, args: _*)
     }
 
     lazy val list: PackratParser[Expr] = "{" ~ repsep(expr, ",") ~ "}" ^^ {
-        case "{" ~ elems ~ "}" => List(elems: _*)
+        case "{" ~ elems ~ "}" => Builtins.List(elems: _*)
     }
 
     lazy val or: PackratParser[Expr] = (or | orExpr) ~ "||" ~ orExpr ^^ {
-        case lhs ~ _ ~ rhs => Or(lhs, rhs)
+        case lhs ~ _ ~ rhs => Builtins.Or(lhs, rhs)
     }
     lazy val orExpr: PackratParser[Expr] = and | not | eq | cmp | tightest
 
     lazy val and: PackratParser[Expr] = (and | andExpr) ~ "&&" ~ andExpr ^^ {
-        case lhs ~ _ ~ rhs => And(lhs, rhs)
+        case lhs ~ _ ~ rhs => Builtins.And(lhs, rhs)
     }
     lazy val andExpr: PackratParser[Expr] = not | eq | cmp | tightest
 
     lazy val not: PackratParser[Expr] = "!" ~ (not | notExpr) ^^ {
-        case _ ~ expr => Not(expr)
+        case _ ~ expr => Builtins.Not(expr)
     }
     lazy val notExpr: PackratParser[Expr] = eq | cmp | tightest
 
     lazy val eq: PackratParser[Expr] =  (eq | eqExpr) ~ ("==" | "!=") ~ eqExpr ^^ {
-        case lhs ~ "==" ~ rhs => Equal(lhs, rhs)
-        case lhs ~ "!=" ~ rhs => Unequal(lhs, rhs)
+        case lhs ~ "==" ~ rhs => Builtins.Equal(lhs, rhs)
+        case lhs ~ "!=" ~ rhs => Builtins.Unequal(lhs, rhs)
     }
     lazy val eqExpr: PackratParser[Expr] = cmp | add | mul | exp | neg | tightest
 
     lazy val cmp: PackratParser[Expr] = (cmp | cmpExpr) ~ ("<" | ">") ~ cmpExpr ^^ {
-        case lhs ~ "<" ~ rhs => Less(lhs, rhs)
-        case lhs ~ ">" ~ rhs => Greater(lhs, rhs)
+        case lhs ~ "<" ~ rhs => Builtins.Less(lhs, rhs)
+        case lhs ~ ">" ~ rhs => Builtins.Greater(lhs, rhs)
     }
     lazy val cmpExpr: PackratParser[Expr] = add | mul | exp | neg | tightest
 
     lazy val add: PackratParser[Expr] = (add | addExpr) ~ ("+" | "-") ~ addExpr ^^ {
-        case lhs ~ "+" ~ rhs => Plus(lhs, rhs)
-        case lhs ~ "-" ~ rhs => Subtract(lhs, rhs)
+        case lhs ~ "+" ~ rhs => Builtins.Plus(lhs, rhs)
+        case lhs ~ "-" ~ rhs => Builtins.Subtract(lhs, rhs)
     }
     lazy val addExpr: PackratParser[Expr] = mul | exp | neg | tightest
 
     lazy val mul: PackratParser[Expr] = mulImplied | mulExplicit
     lazy val mulImplied: PackratParser[Expr] = (mul | mulExpr) ~ mulExpr ^^ {
-        case lhs ~ rhs  => Times(lhs, rhs)
+        case lhs ~ rhs  => Builtins.Times(lhs, rhs)
     }
     lazy val mulExplicit: PackratParser[Expr] = (mul | mulExpr) ~ ("*" | "/") ~ mulExpr ^^ {
-        case lhs ~ "*" ~ rhs => Times(lhs, rhs)
-        case lhs ~ "/" ~ rhs => Divide(lhs, rhs)
+        case lhs ~ "*" ~ rhs => Builtins.Times(lhs, rhs)
+        case lhs ~ "/" ~ rhs => Builtins.Divide(lhs, rhs)
     }
     lazy val mulExpr: PackratParser[Expr] = exp | neg | tightest
 
     lazy val exp: PackratParser[Expr] = tightest ~ "^" ~ (exp | expExpr) ^^ {
-        case lhs ~ _ ~ rhs => Power(lhs, rhs)
+        case lhs ~ _ ~ rhs => Builtins.Power(lhs, rhs)
     }
     lazy val expExpr: PackratParser[Expr] = neg | tightest
 
     lazy val neg: PackratParser[Expr] = "-" ~ (neg | negExpr) ^^ {
         case _ ~ Num(value) => Num(s"-$value")
-        case _ ~ expr => Times(-1, expr)
+        case _ ~ expr => Builtins.Times(-1, expr)
     }
     lazy val negExpr: PackratParser[Expr] = exp | tightest
 
     lazy val part: PackratParser[Expr] = (part | partExpr) ~ "[[" ~ repsep(expr, ",") ~ "]]" ^^ {
-        case expr ~ _ ~ indices ~ _ => Part(indices: _*)
+        case expr ~ _ ~ indices ~ _ => Builtins.Part(indices: _*)
     }
     lazy val partExpr: PackratParser[Expr] = tightest
 
     lazy val span: PackratParser[Expr] =
-        expr ~ ";;" ~ expr               ^^ { case i ~ _ ~ j         => Span(i, j) }      |
-        expr ~ ";;"                      ^^ { case i ~ _             => Span(i, All) }    |
-               ";;" ~ expr               ^^ { case     _ ~ j         => Span(1, j) }      |
-               ";;"                      ^^ { case     _             => Span(1, All) }    |
-        expr ~ ";;" ~ expr ~ ";;" ~ expr ^^ { case i ~ _ ~ j ~ _ ~ k => Span(i, j, k) }   |
-        expr ~ ";;"        ~ ";;" ~ expr ^^ { case i ~ _     ~ _ ~ k => Span(i, All, k) } |
-               ";;" ~ expr ~ ";;" ~ expr ^^ { case     _ ~ j ~ _ ~ k => Span(1, j, k) }   |
-               ";;" ~        ";;" ~ expr ^^ { case     _     ~ _ ~ k => Span(1, All, k) }
+        expr ~ ";;" ~ expr               ^^ { case i ~ _ ~ j         => Builtins.Span(i, j)                 } |
+        expr ~ ";;"                      ^^ { case i ~ _             => Builtins.Span(i, Singletons.All)    } |
+               ";;" ~ expr               ^^ { case     _ ~ j         => Builtins.Span(1, j)                 } |
+               ";;"                      ^^ { case     _             => Builtins.Span(1, Singletons.All)    } |
+        expr ~ ";;" ~ expr ~ ";;" ~ expr ^^ { case i ~ _ ~ j ~ _ ~ k => Builtins.Span(i, j, k)              } |
+        expr ~ ";;"        ~ ";;" ~ expr ^^ { case i ~ _     ~ _ ~ k => Builtins.Span(i, Singletons.All, k) } |
+               ";;" ~ expr ~ ";;" ~ expr ^^ { case     _ ~ j ~ _ ~ k => Builtins.Span(1, j, k)              } |
+               ";;" ~        ";;" ~ expr ^^ { case     _     ~ _ ~ k => Builtins.Span(1, Singletons.All, k) }
 
     lazy val tightest: PackratParser[Expr] = group | value
 

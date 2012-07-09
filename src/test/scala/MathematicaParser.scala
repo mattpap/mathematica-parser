@@ -3,12 +3,14 @@ package org.sympy.parsing.mathematica.tests
 import org.specs2.mutable.Specification
 
 import org.sympy.parsing.mathematica.{MathematicaParser,ParseResult,ParseError}
-import org.sympy.parsing.mathematica.{Expr,Sym,Num,Str,Eval}
-import org.sympy.parsing.mathematica.{Plus,Times,Power,Exp,Span,All,True,False}
-import org.sympy.parsing.mathematica.MathematicaImplicits._
+import org.sympy.parsing.mathematica.{Expr,Sym,Num,Str,Eval,Builtins,Singletons,Implicits}
 
 class MathematicaParserSuite extends Specification {
     import MathematicaParser.parse
+
+    import Builtins._
+    import Singletons._
+    import Implicits._
 
     protected implicit class MatchString(input: String) {
         def ~==(output: Expr) = parse(input) === ParseResult(output)
