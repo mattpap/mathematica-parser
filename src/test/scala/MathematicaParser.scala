@@ -195,6 +195,39 @@ class MathematicaParserSuite extends Specification {
             "(x; y;) z; t"         ~== CompoundExpression(Times(CompoundExpression('x, 'y, Null), 'z), 't)
         }
 
+        "Parse factorials: x!" in {
+            "x!"         ~== Factorial('x)
+            "x! + b"     ~== Plus(Factorial('x), 'b)
+            "a + x!"     ~== Plus('a, Factorial('x))
+            "a + x! + b" ~== Plus(Plus('a, Factorial('x)), 'b)
+            "-x!"        ~== Times(-1, Factorial('x))
+            "127 x!"     ~== Times(127, Factorial('x))
+            "a x!"       ~== Times('a, Factorial('x))
+            "x! b"       ~== Times(Factorial('x), 'b)
+            "x!*b"       ~== Times(Factorial('x), 'b)
+            "a x! b"     ~== Times(Times('a, Factorial('x)), 'b)
+            "x^2!"       ~== Power('x, Factorial(2))
+            "(a x)!"     ~== Factorial(Times('a, 'x))
+            "x!^a b"     ~== Times(Power(Factorial('x), 'a), 'b)
+            "x! !"       ~== Factorial(Factorial('x))
+            "x! !y"      ~== Times(Factorial(Factorial('x)), 'y)
+            "x!*!y"      ~== Times(Factorial('x), Not('y))
+            "(x!)!"      ~== Factorial(Factorial('x))
+            "(x!)!^a"    ~== Power(Factorial(Factorial('x)), 'a)
+        }
+
+        "Parse double factorials: x!!" in {
+            "x!!"        ~== Factorial2('x)
+            "x!!!"       ~== Factorial(Factorial2('x))
+            "x! !!"      ~== Factorial2(Factorial('x))
+            "(x!)!!"     ~== Factorial2(Factorial('x))
+            "(x!!)!"     ~== Factorial(Factorial2('x))
+            "x! ! !"     ~== Factorial(Factorial(Factorial('x)))
+            "x!! !!"     ~== Factorial2(Factorial2('x))
+            "x!! !!^a"   ~== Power(Factorial2(Factorial2('x)), 'a)
+            "x!! !!!^a"  ~== Power(Factorial(Factorial2(Factorial2('x))), 'a)
+        }
+
         "Deal with errors" in {
             parse("1 + ") must beLike {
                 case ParseError(msg, file, pos) =>
