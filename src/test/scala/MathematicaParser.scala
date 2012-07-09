@@ -40,9 +40,22 @@ class MathematicaParserSuite extends Specification {
     }
 
     "Mathematica's language parser" should {
-        "Parse constants" in {
+        "Parse values" in {
             "1" ~== Num("1")
-            "2" ~== Num("2")
+            "127" ~== Num("127")
+            "2.56" ~== Num("2.56")
+            "x" ~== Sym("x")
+            "xyz" ~== Sym("xyz")
+            "\"abc\"" ~== Str("abc")
+        }
+
+        "Parse negative values" in {
+            "-1" ~== Num("-1")
+            "-127" ~== Num("-127")
+            "-2.56" ~== Num("-2.56")
+            "-x" ~== Times(-1, Sym("x"))
+            "-xyz" ~== Times(-1, Sym("xyz"))
+            "-\"abc\"" ~== Times(-1, Str("abc"))
         }
 
         "Parse arithmetics" in {
@@ -69,6 +82,33 @@ class MathematicaParserSuite extends Specification {
             "1^2^(3^4)"     ~== Power(1, Power(2, Power(3, 4)))
             "(1^2^3)^4"     ~== Power(Power(1, Power(2, 3)), 4)
             "1^(2^3^4)"     ~== Power(1, Power(2, Power(3, 4)))
+            "x^y"           ~== Power('x, 'y)
+            "x^y^z"         ~== Power('x, Power('y, 'z))
+            "x^y^z^t"       ~== Power('x, Power('y, Power('z, 't)))
+            "(x^y)^z^t"     ~== Power(Power('x, 'y), Power('z, 't))
+            "x^(y^z)^t"     ~== Power('x, Power(Power('y, 'z), 't))
+            "x^y^(z^t)"     ~== Power('x, Power('y, Power('z, 't)))
+            "(x^y^z)^t"     ~== Power(Power('x, Power('y, 'z)), 't)
+            "x^(y^z^t)"     ~== Power('x, Power('y, Power('z, 't)))
+        }
+
+        "Parse exponentials with negative values" in {
+            "-1^-2"         ~== Times(-1, Power(1, -2))
+            "-1^-2^-3"      ~== Times(-1, Power(1, Times(-1, Power(2, -3))))
+            "-1^-2^-3^-4"   ~== Times(-1, Power(1, Times(-1, Power(2, Times(-1, Power(3, -4))))))
+            "(-1^-2)^-3^-4" ~== Power(Times(-1, Power(1, -2)), Times(-1, Power(3, -4)))
+            "-1^(-2^-3)^-4" ~== Times(-1, Power(1, Power(Times(-1, Power(2, -3)), -4)))
+            "-1^-2^(-3^-4)" ~== Times(-1, Power(1, Times(-1, Power(2, Times(-1, Power(3, -4))))))
+            "(-1^-2^-3)^-4" ~== Power(Times(-1, Power(1, Times(-1, Power(2, -3)))), -4)
+            "-1^(-2^-3^-4)" ~== Times(-1, Power(1, Times(-1, Power(2, Times(-1, Power(3, -4))))))
+            "-x^-y"         ~== Times(-1, Power('x, Times(-1, 'y)))
+            "-x^-y^-z"      ~== Times(-1, Power('x, Times(-1, Power('y, Times(-1, 'z)))))
+            "-x^-y^-z^-t"   ~== Times(-1, Power('x, Times(-1, Power('y, Times(-1, Power('z, Times(-1, 't)))))))
+            "(-x^-y)^-z^-t" ~== Power(Times(-1, Power('x, Times(-1, 'y))), Times(-1, Power('z, Times(-1, 't))))
+            "-x^(-y^-z)^-t" ~== Times(-1, Power('x, Power(Times(-1, Power('y, Times(-1, 'z))), Times(-1, 't))))
+            "-x^-y^(-z^-t)" ~== Times(-1, Power('x, Times(-1, Power('y, Times(-1, Power('z, Times(-1, 't)))))))
+            "(-x^-y^-z)^-t" ~== Power(Times(-1, Power('x, Times(-1, Power('y, Times(-1, 'z))))), Times(-1, 't))
+            "-x^(-y^-z^-t)" ~== Times(-1, Power('x, Times(-1, Power('y, Times(-1, Power('z, Times(-1, 't)))))))
         }
 
         "Deal with errors" in {

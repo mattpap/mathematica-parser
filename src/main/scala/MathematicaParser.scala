@@ -43,7 +43,6 @@ case class Subtract(args: Expr*) extends BuiltinEval
 case class Times(args: Expr*) extends BuiltinEval
 case class Divide(args: Expr*) extends BuiltinEval
 case class Power(args: Expr*) extends BuiltinEval
-case class Neg(args: Expr*) extends BuiltinEval
 case class List(args: Expr*) extends BuiltinEval
 case class Or(args: Expr*) extends BuiltinEval
 case class And(args: Expr*) extends BuiltinEval
@@ -84,7 +83,7 @@ class MathematicaParser extends RegexParsers with PackratParsers {
         case name => Sym(name)
     }
 
-    lazy val number: PackratParser[Num] = """-?(\d+\.\d*|\d*\.\d+|\d+)([eE][+-]?\d+)?""".r ^^ {
+    lazy val number: PackratParser[Num] = """(\d+\.\d*|\d*\.\d+|\d+)([eE][+-]?\d+)?""".r ^^ {
         case value => Num(value)
     }
 
@@ -139,15 +138,16 @@ class MathematicaParser extends RegexParsers with PackratParsers {
     }
     lazy val mulExpr: PackratParser[Expr] = exp | neg | tightest
 
-    lazy val exp: PackratParser[Expr] = expExpr ~ "^" ~ (exp | expExpr) ^^ {
+    lazy val exp: PackratParser[Expr] = tightest ~ "^" ~ (exp | expExpr) ^^ {
         case lhs ~ _ ~ rhs => Power(lhs, rhs)
     }
     lazy val expExpr: PackratParser[Expr] = neg | tightest
 
     lazy val neg: PackratParser[Expr] = "-" ~ (neg | negExpr) ^^ {
-        case _ ~ expr => Neg(expr)
+        case _ ~ Num(value) => Num(s"-$value")
+        case _ ~ expr => Times(-1, expr)
     }
-    lazy val negExpr: PackratParser[Expr] = tightest
+    lazy val negExpr: PackratParser[Expr] = exp | tightest
 
     lazy val part: PackratParser[Expr] = (part | partExpr) ~ "[[" ~ repsep(expr, ",") ~ "]]" ^^ {
         case expr ~ _ ~ indices ~ _ => Part(indices: _*)
