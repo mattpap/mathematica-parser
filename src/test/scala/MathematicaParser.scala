@@ -135,7 +135,7 @@ class MathematicaParserSuite extends Specification {
             "-x^(-y^-z^-t)" ~== Times(-1, Power('x, Times(-1, Power('y, Times(-1, Power('z, Times(-1, 't)))))))
         }
 
-        "Parse rules" in {
+        "Parse rules: x -> y" in {
             "x -> y"                 ~== Rule('x, 'y)
             "x -> y -> z"            ~== Rule('x, Rule('y, 'z))
             "(x -> y) -> z"          ~== Rule(Rule('x, 'y), 'z)
@@ -149,6 +149,15 @@ class MathematicaParserSuite extends Specification {
             "-x -> y + z -> 3*t"     ~== Rule(Times(-1, 'x), Rule(Plus('y, 'z), Times(3, 't)))
             "x -> y || z -> t"       ~== Rule('x, Rule(Or('y, 'z), 't))
             "(x -> y) || (z -> t)"   ~== Or(Rule('x, 'y), Rule('z, 't))
+        }
+
+        "Parse replace all: x /. y" in {
+            "x /. y"             ~== ReplaceAll('x, 'y)
+            "x /. y /. z"        ~== ReplaceAll(ReplaceAll('x, 'y), 'z)
+            "(x /. y) /. z"      ~== ReplaceAll(ReplaceAll('x, 'y), 'z)
+            "x /. (y /. z)"      ~== ReplaceAll('x, ReplaceAll('y, 'z))
+            "x -> y /. z -> t"   ~== ReplaceAll(Rule('x, 'y), Rule('z, 't))
+            "x -> (y /. z) -> t" ~== Rule('x, Rule(ReplaceAll('y, 'z), 't))
         }
 
         "Deal with errors" in {

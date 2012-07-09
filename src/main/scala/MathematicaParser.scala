@@ -59,6 +59,7 @@ object Builtins {
     case class Less(args: Expr*) extends Builtin
     case class Greater(args: Expr*) extends Builtin
     case class Rule(args: Expr*) extends Builtin
+    case class ReplaceAll(args: Expr*) extends Builtin
     case class Span(args: Expr*) extends Builtin
     case class Part(args: Expr*) extends Builtin
     case class Exp(args: Expr*) extends Builtin
@@ -110,8 +111,13 @@ class MathematicaParser extends RegexParsers with PackratParsers {
 
     lazy val expr: PackratParser[Expr] =
         // Precedence in increasing order (->):
-        // r                                            r
-        rule | or | and | not | eq | cmp | add | mul | exp | neg | tightest
+        //  l      r                                              r
+        replace | rule | or | and | not | eq | cmp | add | mul | exp | neg | tightest
+
+    lazy val replace: PackratParser[Expr] = (replace | replaceExpr) ~ "/." ~ replaceExpr ^^ {
+        case lhs ~ _ ~ rhs => Builtins.ReplaceAll(lhs, rhs)
+    }
+    lazy val replaceExpr: PackratParser[Expr] = rule | or | and | not | eq | cmp | add | mul | exp | neg | tightest
 
     lazy val rule: PackratParser[Expr] = ruleExpr ~ "->" ~ (rule | ruleExpr) ^^ {
         case lhs ~ _ ~ rhs => Builtins.Rule(lhs, rhs)
