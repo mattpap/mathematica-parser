@@ -60,6 +60,12 @@ object Builtins {
     case class Greater(args: Expr*) extends Builtin
     case class Rule(args: Expr*) extends Builtin
     case class ReplaceAll(args: Expr*) extends Builtin
+    case class Set(args: Expr*) extends Builtin
+    case class SetDelayed(args: Expr*) extends Builtin
+    case class AddTo(args: Expr*) extends Builtin
+    case class SubtractFrom(args: Expr*) extends Builtin
+    case class TimesBy(args: Expr*) extends Builtin
+    case class DivideBy(args: Expr*) extends Builtin
     case class Span(args: Expr*) extends Builtin
     case class Part(args: Expr*) extends Builtin
     case class Exp(args: Expr*) extends Builtin
@@ -111,8 +117,18 @@ class MathematicaParser extends RegexParsers with PackratParsers {
 
     lazy val expr: PackratParser[Expr] =
         // Precedence in increasing order (->):
-        //  l      r                                              r
-        replace | rule | or | and | not | eq | cmp | add | mul | exp | neg | tightest
+        // r         l      r                                              r
+        assing | replace | rule | or | and | not | eq | cmp | add | mul | exp | neg | tightest
+
+    lazy val assing: PackratParser[Expr] = assingExpr ~ ("=" | ":=" | "+=" | "-=" | "*=" | "/=") ~ (assing | assingExpr) ^^ {
+        case lhs ~  "=" ~ rhs => Builtins.Set(lhs, rhs)
+        case lhs ~ ":=" ~ rhs => Builtins.SetDelayed(lhs, rhs)
+        case lhs ~ "+=" ~ rhs => Builtins.AddTo(lhs, rhs)
+        case lhs ~ "-=" ~ rhs => Builtins.SubtractFrom(lhs, rhs)
+        case lhs ~ "*=" ~ rhs => Builtins.TimesBy(lhs, rhs)
+        case lhs ~ "/=" ~ rhs => Builtins.DivideBy(lhs, rhs)
+    }
+    lazy val assingExpr: PackratParser[Expr] = replace | rule | or | and | not | eq | cmp | add | mul | exp | neg | tightest
 
     lazy val replace: PackratParser[Expr] = (replace | replaceExpr) ~ "/." ~ replaceExpr ^^ {
         case lhs ~ _ ~ rhs => Builtins.ReplaceAll(lhs, rhs)

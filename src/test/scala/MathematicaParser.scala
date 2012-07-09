@@ -160,6 +160,25 @@ class MathematicaParserSuite extends Specification {
             "x -> (y /. z) -> t" ~== Rule('x, Rule(ReplaceAll('y, 'z), 't))
         }
 
+        "Parse assignment operators: =, :=, +=, -=, *=, /=" in {
+            "x  = y /. z"           ~== Set('x, ReplaceAll('y, 'z))
+            "x  = y /. z  = t -> f" ~== Set('x, Set(ReplaceAll('y, 'z), Rule('t, 'f)))
+            "x := y /. z"           ~== SetDelayed('x, ReplaceAll('y, 'z))
+            "x := y /. z := t -> f" ~== SetDelayed('x, SetDelayed(ReplaceAll('y, 'z), Rule('t, 'f)))
+            "x += y /. z"           ~== AddTo('x, ReplaceAll('y, 'z))
+            "x += y /. z += t -> f" ~== AddTo('x, AddTo(ReplaceAll('y, 'z), Rule('t, 'f)))
+            "x -= y /. z"           ~== SubtractFrom('x, ReplaceAll('y, 'z))
+            "x -= y /. z -= t -> f" ~== SubtractFrom('x, SubtractFrom(ReplaceAll('y, 'z), Rule('t, 'f)))
+            "x *= y /. z"           ~== TimesBy('x, ReplaceAll('y, 'z))
+            "x *= y /. z *= t -> f" ~== TimesBy('x, TimesBy(ReplaceAll('y, 'z), Rule('t, 'f)))
+            "x /= y /. z"           ~== DivideBy('x, ReplaceAll('y, 'z))
+            "x /= y /. z /= t -> f" ~== DivideBy('x, DivideBy(ReplaceAll('y, 'z), Rule('t, 'f)))
+
+            "a + 1 = b + 2 := c + 3 += d + 4 -= e + 5 *= f + 6 /= g + 7" ~==
+                Set(Plus('a, 1), SetDelayed(Plus('b, 2), AddTo(Plus('c, 3), SubtractFrom(Plus('d, 4),
+                    TimesBy(Plus('e, 5), DivideBy(Plus('f, 6), Plus('g, 7)))))))
+        }
+
         "Deal with errors" in {
             parse("1 + ") must beLike {
                 case ParseError(msg, file, pos) =>
