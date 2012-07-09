@@ -228,6 +228,26 @@ class MathematicaParserSuite extends Specification {
             "x!! !!!^a"  ~== Power(Factorial(Factorial2(Factorial2('x))), 'a)
         }
 
+        "Parse equivalence operator: a === b" in {
+            "x === y"                     ~== SameQ('x, 'y)
+            "!x === y"                    ~== Not(SameQ('x, 'y))
+            "x === !y"                    ~== SameQ('x, Not('y))
+            "x === y === z"               ~== SameQ('x, 'y, 'z)
+            "!x === y === z"              ~== Not(SameQ('x, 'y, 'z))
+            "x === !y === z"              ~== SameQ('x, Not(SameQ('y, 'z)))
+            "!x === y === z === t"        ~== Not(SameQ('x, 'y, 'z, 't))
+            "x + 1 === a y === z! === -t" ~== SameQ(Plus('x, 1), Times('a, 'y), Factorial('z), Times(-1, 't))
+            "x === y == z === t"          ~== SameQ('x, Equal('y, 'z), 't)
+            "x == y === z == t"           ~== SameQ(Equal('x, 'y), Equal('z, 't))
+            "x === y || z === t"          ~== Or(SameQ('x, 'y), SameQ('z, 't))
+            "x === y && z === t"          ~== And(SameQ('x, 'y), SameQ('z, 't))
+            "x === y || !z === t"         ~== Or(SameQ('x, 'y), Not(SameQ('z, 't)))
+            "x === y && !z === t"         ~== And(SameQ('x, 'y), Not(SameQ('z, 't)))
+            "!x === y || !z === t"        ~== Or(Not(SameQ('x, 'y)), Not(SameQ('z, 't)))
+            "!x === y && !z === t"        ~== And(Not(SameQ('x, 'y)), Not(SameQ('z, 't)))
+            "x -> y === z -> t"           ~== Rule('x, Rule(SameQ('y, 'z), 't))
+        }
+
         "Deal with errors" in {
             parse("1 + ") must beLike {
                 case ParseError(msg, file, pos) =>
