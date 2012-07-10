@@ -67,6 +67,11 @@ class MathematicaParserSuite extends Specification {
             "-\"abc\"" ~== Times(-1, Str("abc"))
         }
 
+        "Parse simple patterns" in {
+            "x_"   ~== Pattern('x, Blank())
+            "xyz_" ~== Pattern('xyz, Blank())
+        }
+
         "Parse mixed arithmetics" in {
             "1 + 2"         ~== Plus(1, 2)
             "1 + 2 + 3"     ~== Plus(1, 2, 3)

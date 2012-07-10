@@ -2,6 +2,7 @@ package org.sympy.parsing.mathematica
 
 import java.io.File
 import scala.io.Source
+import scala.util.matching.Regex
 
 import scala.util.parsing.combinator._
 import scala.util.parsing.input.{Positional,Position}
@@ -80,6 +81,8 @@ object Builtins {
     case class Factorial(args: Expr*) extends Builtin
     case class Factorial2(args: Expr*) extends Builtin
     case class Out(args: Expr*) extends Builtin
+    case class Pattern(args: Expr*) extends Builtin
+    case class Blank(args: Expr*) extends Builtin
 }
 
 object Singletons {
@@ -101,12 +104,30 @@ object Implicits {
 class MathematicaParser extends RegexParsers with PackratParsers {
     protected override val whiteSpace = """(\s|(?m)\(\*(\*(?!/)|[^*])*\*\))+""".r
 
+    def regexMatch(r: Regex): Parser[Regex.Match] = new Parser[Regex.Match] {
+        def apply(in: Input) = {
+            val source = in.source
+            val offset = in.offset
+            val start = handleWhiteSpace(source, offset)
+            (r findPrefixMatchOf (source.subSequence(start, source.length))) match {
+                case Some(matched) =>
+                    Success(matched, in.drop(start + matched.end - offset))
+                case None =>
+                    val found = if (start == source.length()) "end of source" else "`" + source.charAt(start) + "'"
+                    Failure("string matching regex `" + r + "' expected but " + found + " found", in.drop(start - offset))
+            }
+        }
+    }
+
     import Implicits._
 
-    lazy val ident: PackratParser[String] = regex("""[a-zA-Z][a-zA-Z0-9]*""".r)
+    protected val name = "[a-zA-Z][a-zA-Z0-9]*"
 
-    lazy val symbol: PackratParser[Sym] = ident ^^ {
-        case name => Sym(name)
+    lazy val ident: PackratParser[String] = regex(name.r)
+
+    lazy val symbol: PackratParser[Expr] = regexMatch(s"($name)(_?)".r) ^^ {
+        case Regex.Groups(name, "")  => Sym(name)
+        case Regex.Groups(name, "_") => Builtins.Pattern(Sym(name), Builtins.Blank())
     }
 
     lazy val number: PackratParser[Num] = """(\d+\.\d*|\d*\.\d+|\d+)([eE][+-]?\d+)?""".r ^^ {
