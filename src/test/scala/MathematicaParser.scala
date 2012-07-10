@@ -72,6 +72,27 @@ class MathematicaParserSuite extends Specification {
             "xyz_" ~== Pattern('xyz, Blank())
         }
 
+        "Parse output references: %, %%, %%%, %n" in {
+            "%"          ~== Out()
+            "%%"         ~== Out(-2)
+            "%%%"        ~== Out(-3)
+            "%0"         ~== Out(0)
+            "%1"         ~== Out(1)
+            "%127"       ~== Out(127)
+            "% + 123"    ~== Plus(Out(), 123)
+            "2*%%%"      ~== Times(2, Out(-3))
+            "%17!"       ~== Factorial(Out(17))
+        }
+
+        "Parse slots: #, #127" in {
+            "#"          ~== Slot(1)
+            "#127"       ~== Slot(127)
+            "a #"        ~== Times('a, Slot(1))
+            "a #127"     ~== Times('a, Slot(127))
+            "a # + 1"    ~== Plus(Times('a, Slot(1)), 1)
+            "a #127 + 1" ~== Plus(Times('a, Slot(127)), 1)
+        }
+
         "Parse mixed arithmetics" in {
             "1 + 2"         ~== Plus(1, 2)
             "1 + 2 + 3"     ~== Plus(1, 2, 3)
@@ -368,18 +389,6 @@ class MathematicaParserSuite extends Specification {
             "! a ;; b ;; c"             ~== Not(Span('a, 'b, 'c))
 
             "x[[0;;1;;2, a;;b;;c]]"     ~== Part('x, Span(0, 1, 2), Span('a, 'b, 'c))
-        }
-
-        "Parse output references: %, %%, %%%, %n" in {
-            "%"          ~== Out()
-            "%%"         ~== Out(-2)
-            "%%%"        ~== Out(-3)
-            "%0"         ~== Out(0)
-            "%1"         ~== Out(1)
-            "%127"       ~== Out(127)
-            "% + 123"    ~== Plus(Out(), 123)
-            "2*%%%"      ~== Times(2, Out(-3))
-            "%17!"       ~== Factorial(Out(17))
         }
 
         "Deal with errors" in {
