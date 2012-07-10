@@ -149,7 +149,7 @@ class MathematicaParser extends RegexParsers with PackratParsers {
         eq        | // TODO flat \
         cmp       | // TODO flat /
         add       | // flat
-        mul       | // TODO flat
+        mul       | // flat
         exp       | // right group
         neg       | // unary, prefix
         factorial | // unary, postfix
@@ -242,12 +242,18 @@ class MathematicaParser extends RegexParsers with PackratParsers {
         mul | exp | neg | factorial | tightest
 
     lazy val mul: PackratParser[Expr] = mulImplied | mulExplicit
-    lazy val mulImplied: PackratParser[Expr] = (mul | mulExpr) ~ mulImpliedRhsExpr ^^ {
-        case lhs ~ rhs  => Builtins.Times(lhs, rhs)
+    lazy val mulImplied: PackratParser[Expr] = mulExpr ~ rep1(mulImpliedRhsExpr) ^^ {
+        case head ~ tail =>
+            val args = head :: tail
+            Builtins.Times(args: _*)
     }
-    lazy val mulExplicit: PackratParser[Expr] = (mul | mulExpr) ~ ("*" | "/") ~ mulExpr ^^ {
-        case lhs ~ "*" ~ rhs => Builtins.Times(lhs, rhs)
-        case lhs ~ "/" ~ rhs => Builtins.Divide(lhs, rhs)
+    lazy val mulExplicit: PackratParser[Expr] = mulExpr ~ rep1(("*" | "/") ~ mulExpr) ^^ {
+        case head ~ tail =>
+            val args = head :: tail.map {
+                case "*" ~ expr => expr
+                case "/" ~ expr => Builtins.Power(expr, -1)
+            }
+            Builtins.Times(args: _*)
     }
     lazy val mulImpliedRhsExpr: PackratParser[Expr] =
         not | exp | factorial | tightest
