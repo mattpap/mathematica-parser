@@ -142,8 +142,8 @@ class MathematicaParser extends RegexParsers with PackratParsers {
         assign    | // right group
         replace   | // left group
         rule      | // right group
-        or        | // TODO flat
-        and       | // TODO flat
+        or        | // flat
+        and       | // flat
         not       | // unary, prefix
         same      | // flat
         eq        | // TODO flat \
@@ -191,14 +191,14 @@ class MathematicaParser extends RegexParsers with PackratParsers {
     lazy val ruleExpr: PackratParser[Expr] =
         or | and | not | same | eq | cmp | add | mul | exp | neg | factorial | tightest
 
-    lazy val or: PackratParser[Expr] = (or | orExpr) ~ "||" ~ orExpr ^^ {
-        case lhs ~ _ ~ rhs => Builtins.Or(lhs, rhs)
+    lazy val or: PackratParser[Expr] = orExpr ~ rep1("||" ~> orExpr) ^^ {
+        case head ~ tail => Builtins.Or(head :: tail: _*)
     }
     lazy val orExpr: PackratParser[Expr] =
         and | not | same | eq | cmp | add | mul | exp | neg | factorial | tightest
 
-    lazy val and: PackratParser[Expr] = (and | andExpr) ~ "&&" ~ andExpr ^^ {
-        case lhs ~ _ ~ rhs => Builtins.And(lhs, rhs)
+    lazy val and: PackratParser[Expr] = andExpr ~ rep1("&&" ~> andExpr) ^^ {
+        case head ~ tail => Builtins.And(head :: tail: _*)
     }
     lazy val andExpr: PackratParser[Expr] =
         not | same | eq | cmp | add | mul | exp | neg | factorial | tightest
@@ -209,8 +209,8 @@ class MathematicaParser extends RegexParsers with PackratParsers {
     lazy val notExpr: PackratParser[Expr] =
         same | eq | cmp | add | mul | exp | neg | factorial | tightest
 
-    lazy val same: PackratParser[Expr] = sameExpr ~ "===" ~ rep1sep(not | sameExpr, "===") ^^ {
-        case elem ~ _ ~ elems => Builtins.SameQ(elem :: elems: _*)
+    lazy val same: PackratParser[Expr] = sameExpr ~ rep1("===" ~> (not | sameExpr)) ^^ {
+        case head ~ tail => Builtins.SameQ(head :: tail: _*)
     }
     lazy val sameExpr: PackratParser[Expr] =
         eq | cmp | add | mul | exp | neg | factorial | tightest

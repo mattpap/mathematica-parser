@@ -255,6 +255,19 @@ class MathematicaParserSuite extends Specification {
             "x -> y === z -> t"           ~== Rule('x, Rule(SameQ('y, 'z), 't))
         }
 
+        "Parse logical operators: x || y, x && y" in {
+            "x || y"               ~== Or('x, 'y)
+            "x || y || z"          ~== Or('x, 'y, 'z)
+            "x || y || z || t"     ~== Or('x, 'y, 'z, 't)
+            "x || (y || z) || t"   ~== Or('x, Or('y, 'z), 't)
+            "x && y"               ~== And('x, 'y)
+            "x && y && z"          ~== And('x, 'y, 'z)
+            "x && y && z && t"     ~== And('x, 'y, 'z, 't)
+            "x && (y && z) && t"   ~== And('x, And('y, 'z), 't)
+            "x || y && z || t"     ~== Or('x, And('y, 'z), 't)
+            "!x || !y && !z || !t" ~== Or(Not('x), And(Not('y), Not('z)), Not('t))
+        }
+
         "Parse output references: %, %%, %%%, %n" in {
             "%"          ~== Out()
             "%%"         ~== Out(-2)
