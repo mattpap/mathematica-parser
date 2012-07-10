@@ -273,6 +273,51 @@ class MathematicaParserSuite extends Specification {
             "!x || !y && !z || !t" ~== Or(Not('x), And(Not('y), Not('z)), Not('t))
         }
 
+        "Parse comparison operators: x == y, x != y, x <= y, x < y, x >= y, x > y" in {
+            "x == y"               ~== Equal('x, 'y)
+            "x == y == z"          ~== Equal('x, 'y, 'z)
+            "x == y == z == t"     ~== Equal('x, 'y, 'z, 't)
+            "x != y"               ~== Unequal('x, 'y)
+            "x != y != z"          ~== Unequal('x, 'y, 'z)
+            "x != y != z != t"     ~== Unequal('x, 'y, 'z, 't)
+            "x <= y"               ~== LessEqual('x, 'y)
+            "x <= y <= z"          ~== LessEqual('x, 'y, 'z)
+            "x <= y <= z <= t"     ~== LessEqual('x, 'y, 'z, 't)
+            "x <  y"               ~== Less('x, 'y)
+            "x <  y <  z"          ~== Less('x, 'y, 'z)
+            "x <  y <  z <  t"     ~== Less('x, 'y, 'z, 't)
+            "x >= y"               ~== GreaterEqual('x, 'y)
+            "x >= y >= z"          ~== GreaterEqual('x, 'y, 'z)
+            "x >= y >= z >= t"     ~== GreaterEqual('x, 'y, 'z, 't)
+            "x >  y"               ~== Greater('x, 'y)
+            "x >  y >  z"          ~== Greater('x, 'y, 'z)
+            "x >  y >  z >  t"     ~== Greater('x, 'y, 'z, 't)
+
+            "x! == y"              ~== Equal(Factorial('x), 'y)
+            "x! != y"              ~== Unequal(Factorial('x), 'y)
+            "x!!= y"               ~== Set(Factorial2('x), 'y)
+            "x!! = y"              ~== Set(Factorial2('x), 'y)
+            "x!!!= y"              ~== Unequal(Factorial2('x), 'y)
+
+            "!x == y"              ~== Not(Equal('x, 'y))
+            "!x == y == z"         ~== Not(Equal('x, 'y, 'z))
+            "!x != y"              ~== Not(Unequal('x, 'y))
+            "!x != y != z"         ~== Not(Unequal('x, 'y, 'z))
+            "!x <= y"              ~== Not(LessEqual('x, 'y))
+            "!x <= y <= z"         ~== Not(LessEqual('x, 'y, 'z))
+            "!x <  y"              ~== Not(Less('x, 'y))
+            "!x <  y <  z"         ~== Not(Less('x, 'y, 'z))
+            "!x >= y"              ~== Not(GreaterEqual('x, 'y))
+            "!x >= y >= z"         ~== Not(GreaterEqual('x, 'y, 'z))
+            "!x >  y"              ~== Not(Greater('x, 'y))
+            "!x >  y >  z"         ~== Not(Greater('x, 'y, 'z))
+
+            "a == b != c <= d < e >= f > g" ~== Inequality('a, Equal(), 'b, Unequal(),
+                'c, LessEqual(), 'd, Less(), 'e, GreaterEqual(), 'f, Greater(), 'g)
+            "-a == 127 b + 1 != c^3 <= d!" ~== Inequality(Times(-1, 'a), Equal(),
+                Plus(Times(127, 'b), 1), Unequal(), Power('c, 3), LessEqual(), Factorial('d))
+        }
+
         "Parse output references: %, %%, %%%, %n" in {
             "%"          ~== Out()
             "%%"         ~== Out(-2)
