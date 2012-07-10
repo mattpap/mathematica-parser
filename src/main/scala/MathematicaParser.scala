@@ -237,13 +237,15 @@ class MathematicaParser extends RegexParsers with PackratParsers {
         mul | exp | neg | factorial | tightest
 
     lazy val mul: PackratParser[Expr] = mulImplied | mulExplicit
-    lazy val mulImplied: PackratParser[Expr] = (mul | mulExpr) ~ mulExpr ^^ {
+    lazy val mulImplied: PackratParser[Expr] = (mul | mulExpr) ~ mulImpliedRhsExpr ^^ {
         case lhs ~ rhs  => Builtins.Times(lhs, rhs)
     }
     lazy val mulExplicit: PackratParser[Expr] = (mul | mulExpr) ~ ("*" | "/") ~ mulExpr ^^ {
         case lhs ~ "*" ~ rhs => Builtins.Times(lhs, rhs)
         case lhs ~ "/" ~ rhs => Builtins.Divide(lhs, rhs)
     }
+    lazy val mulImpliedRhsExpr: PackratParser[Expr] =
+        not | exp | factorial | tightest
     lazy val mulExpr: PackratParser[Expr] =
         not | exp | neg | factorial | tightest
 
