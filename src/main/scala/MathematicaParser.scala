@@ -148,7 +148,7 @@ class MathematicaParser extends RegexParsers with PackratParsers {
         same      | // flat
         eq        | // TODO flat \
         cmp       | // TODO flat /
-        add       | // TODO flat
+        add       | // flat
         mul       | // TODO flat
         exp       | // right group
         neg       | // unary, prefix
@@ -229,9 +229,14 @@ class MathematicaParser extends RegexParsers with PackratParsers {
     lazy val cmpExpr: PackratParser[Expr] =
         add | mul | exp | neg | factorial | tightest
 
-    lazy val add: PackratParser[Expr] = (add | addExpr) ~ ("+" | "-") ~ addExpr ^^ {
-        case lhs ~ "+" ~ rhs => Builtins.Plus(lhs, rhs)
-        case lhs ~ "-" ~ rhs => Builtins.Subtract(lhs, rhs)
+    lazy val add: PackratParser[Expr] = addExpr ~ rep1(("+" | "-") ~ addExpr) ^^ {
+        case head ~ tail =>
+            val args = head :: tail.map {
+                case "+" ~ expr       => expr
+                case "-" ~ Num(value) => Num(s"-$value")
+                case "-" ~ expr       => Builtins.Times(-1, expr)
+            }
+            Builtins.Plus(args: _*)
     }
     lazy val addExpr: PackratParser[Expr] =
         mul | exp | neg | factorial | tightest
