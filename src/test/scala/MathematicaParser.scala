@@ -395,6 +395,19 @@ class MathematicaParserSuite extends Specification {
             "x[[0;;1;;2, a;;b;;c]]"     ~== Part('x, Span(0, 1, 2), Span('a, 'b, 'c))
         }
 
+        "Parse pattern test operator: a ? b" in {
+            "x_Integer ? Prime"         ~== PatternTest(Pattern('x, Blank('Integer)), 'Prime)
+            "-_ ? Even"                 ~== Times(-1, PatternTest(Blank(), 'Even))
+            "a b ? Odd"                 ~== Times('a, PatternTest('b, 'Odd))
+            "_^_? Real"                 ~== Power(Blank(), PatternTest(Blank(), 'Real))
+            "_ ? Integer!"              ~== Factorial(PatternTest(Blank(), 'Integer))
+            // "_! ? Positive"             ~== PatternTest(Factorial(Blank()), 'Positive)
+            // "_! ? Positive!"            ~== Factorial(PatternTest(Factorial(Blank()), 'Positive))
+            "_? Positive[[0]]"          ~== Part(PatternTest(Blank(), 'Positive), 0)
+            // "_[[0]] ? Positive"         ~== PatternTest(Part(Blank(), 0), 'Positive)
+            // "_[[0]] ? Positive[[1]]"    ~== Part(PatternTest(Part(Blank(), 0), 'Positive), 1)
+        }
+
         "Deal with errors" in {
             parse("1 + ") must beLike {
                 case ParseError(msg, file, pos) =>
