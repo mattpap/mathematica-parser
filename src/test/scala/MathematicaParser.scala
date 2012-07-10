@@ -339,6 +339,37 @@ class MathematicaParserSuite extends Specification {
             "-x[[-y[[f[t]]]]]"          ~== Times(-1, Part('x, Times(-1, Part('y, Eval("f", 't)))))
         }
 
+        "Parse span operators: a ;; b, a ;; b ;; c" in {
+            "a ;; b"                    ~== Span('a, 'b)
+            "a ;;  "                    ~== Span('a, All)
+            "  ;; b"                    ~== Span(1, 'b)
+            "  ;;  "                    ~== Span(1, All)
+            "a ;; b ;; c"               ~== Span('a, 'b, 'c)
+            "a ;;   ;; c"               ~== Span('a, All, 'c)
+            "  ;; b ;; c"               ~== Span(1, 'b, 'c)
+            "  ;;   ;; c"               ~== Span(1, All, 'c)
+
+            "a + b ;; c + d"            ~== Span(Plus('a, 'b), Plus('c, 'd))
+            "a b ;; c d"                ~== Span(Times('a, 'b), Times('c, 'd))
+            "a^b ;; c^d"                ~== Span(Power('a, 'b), Power('c, 'd))
+            "-a ;; -b"                  ~== Span(Times(-1, 'a), Times(-1, 'b))
+            "a! ;; b!"                  ~== Span(Factorial('a), Factorial('b))
+
+            "a ;; b ; c ;; d"           ~== CompoundExpression(Span('a, 'b), Span('c, 'd))
+            "a ;; b /. c ;; d"          ~== ReplaceAll(Span('a, 'b), Span('c, 'd))
+            "a ;; b -> c ;; d"          ~== Rule(Span('a, 'b), Span('c, 'd))
+            "a ;; b = c ;; d"           ~== Set(Span('a, 'b), Span('c, 'd))
+            "a ;; b := c ;; d"          ~== SetDelayed(Span('a, 'b), Span('c, 'd))
+            "a ;; b === c ;; d"         ~== SameQ(Span('a, 'b), Span('c, 'd))
+            "a ;; b == c ;; d"          ~== Equal(Span('a, 'b), Span('c, 'd))
+            "a ;; b != c ;; d"          ~== Unequal(Span('a, 'b), Span('c, 'd))
+            "a ;; b || c ;; d"          ~== Or(Span('a, 'b), Span('c, 'd))
+            "a ;; b && c ;; d"          ~== And(Span('a, 'b), Span('c, 'd))
+            "! a ;; b ;; c"             ~== Not(Span('a, 'b, 'c))
+
+            "x[[0;;1;;2, a;;b;;c]]"     ~== Part('x, Span(0, 1, 2), Span('a, 'b, 'c))
+        }
+
         "Parse output references: %, %%, %%%, %n" in {
             "%"          ~== Out()
             "%%"         ~== Out(-2)
