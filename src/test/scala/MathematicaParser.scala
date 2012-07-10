@@ -318,6 +318,27 @@ class MathematicaParserSuite extends Specification {
                 Plus(Times(127, 'b), 1), Unequal(), Power('c, 3), LessEqual(), Factorial('d))
         }
 
+        "Parse indexing operator: x[[0, 1, 2, 3]]" in {
+            "x[[0]]"                    ~== Part('x, 0)
+            "x[[0, 1, 2, 3]]"           ~== Part('x, 0, 1, 2, 3)
+            "x[[0]][[1]]"               ~== Part(Part('x, 0), 1)
+            "x[[0]][[1]][[2]]"          ~== Part(Part(Part('x, 0), 1), 2)
+            "x[[0]][[1]][[2]][[3]]"     ~== Part(Part(Part(Part('x, 0), 1), 2), 3)
+            "x[[0]][[1,2]][[3,4,5]]"    ~== Part(Part(Part('x, 0), 1, 2), 3, 4, 5)
+
+            "-x[[0]]"                   ~== Times(-1, Part('x, 0))
+            "3x[[0]]"                   ~== Times( 3, Part('x, 0))
+            "a x[[0]]"                  ~== Times('a, Part('x, 0))
+            "x^a[[0]]"                  ~== Power('x, Part('a, 0))
+            "x[[0]]^a"                  ~== Power(Part('x, 0), 'a)
+            "x[[0]]^y[[1]]"             ~== Power(Part('x, 0), Part('y, 1))
+            "x[[0]] = 127"              ~== Set(Part('x, 0), 127)
+            "{x[[0]], y[[0]]} = {a, b}" ~== Set(List(Part('x, 0), Part('y, 0)), List('a, 'b))
+
+            "x[[y[[f[t]]]]]"            ~== Part('x, Part('y, Eval("f", 't)))
+            "-x[[-y[[f[t]]]]]"          ~== Times(-1, Part('x, Times(-1, Part('y, Eval("f", 't)))))
+        }
+
         "Parse output references: %, %%, %%%, %n" in {
             "%"          ~== Out()
             "%%"         ~== Out(-2)
