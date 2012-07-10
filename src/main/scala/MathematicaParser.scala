@@ -129,9 +129,23 @@ class MathematicaParser extends RegexParsers with PackratParsers {
 
     lazy val ident: PackratParser[String] = regex(name.r)
 
-    lazy val symbol: PackratParser[Expr] = regexMatch(s"($name)(_?)".r) ^^ {
-        case Regex.Groups(name, "")  => Sym(name)
-        case Regex.Groups(name, "_") => Builtins.Pattern(Sym(name), Builtins.Blank())
+    lazy val pattern: PackratParser[Expr] =
+        symbolBlankWithHead | symbolBlank | symbol | blankWithHead | blank
+
+    lazy val blank: PackratParser[Expr] = "_" ^^ {
+        case _ => Builtins.Blank()
+    }
+    lazy val blankWithHead: PackratParser[Expr] = regexMatch(s"_($name)".r) ^^ {
+        case Regex.Groups(head) => Builtins.Blank(Sym(head))
+    }
+    lazy val symbol: PackratParser[Expr] = regexMatch(s"($name)".r) ^^ {
+        case Regex.Groups(name) => Sym(name)
+    }
+    lazy val symbolBlank: PackratParser[Expr] = regexMatch(s"($name)_".r) ^^ {
+        case Regex.Groups(name) => Builtins.Pattern(Sym(name), Builtins.Blank())
+    }
+    lazy val symbolBlankWithHead: PackratParser[Expr] = regexMatch(s"($name)_($name)".r) ^^ {
+        case Regex.Groups(name, head) => Builtins.Pattern(Sym(name), Builtins.Blank(Sym(head)))
     }
 
     lazy val number: PackratParser[Num] = """(\d+\.\d*|\d*\.\d+|\d+)([eE][+-]?\d+)?""".r ^^ {
@@ -365,7 +379,7 @@ class MathematicaParser extends RegexParsers with PackratParsers {
     lazy val tightest: PackratParser[Expr] = group | value
 
     lazy val group: PackratParser[Expr] = "(" ~> expr <~ ")"
-    lazy val value: PackratParser[Expr] = apply | list | slot | out | symbol | number | str
+    lazy val value: PackratParser[Expr] = apply | list | slot | out | pattern | number | str
 
     lazy val mathematica: PackratParser[Expr] = expr
 }

@@ -68,8 +68,12 @@ class MathematicaParserSuite extends Specification {
         }
 
         "Parse simple patterns" in {
-            "x_"   ~== Pattern('x, Blank())
-            "xyz_" ~== Pattern('xyz, Blank())
+            "_"           ~== Blank()
+            "_Integer"    ~== Blank('Integer)
+            "x_"          ~== Pattern('x, Blank())
+            "x_Integer"   ~== Pattern('x, Blank('Integer))
+            "xyz_"        ~== Pattern('xyz, Blank())
+            "xyz_Integer" ~== Pattern('xyz, Blank('Integer))
         }
 
         "Parse output references: %, %%, %%%, %n" in {
