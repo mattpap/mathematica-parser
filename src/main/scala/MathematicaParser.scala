@@ -107,7 +107,25 @@ object Implicits {
         if (value) Singletons.True else Singletons.False
 }
 
-class MathematicaParser extends RegexParsers with PackratParsers {
+trait ExtraParsers { self: Parsers =>
+    def notFollowedBy[T](p: => Parser[T], elems: Elem*): Parser[T] = Parser { in =>
+        p(in) match {
+            case success @ Success(_, rest) =>
+                if (rest.atEnd) success
+                else {
+                    elems.find(rest.first == _) match {
+                        case None =>
+                            success
+                        case Some(elem) =>
+                            Failure(s"`$elem' not allowed in this context", rest)
+                    }
+                }
+            case error => error
+        }
+    }
+}
+
+class MathematicaParser extends RegexParsers with PackratParsers with ExtraParsers {
     protected override val whiteSpace = """(\s|(?m)\(\*(\*(?!/)|[^*])*\*\))+""".r
 
     def regexMatch(r: Regex): Parser[Regex.Match] = new Parser[Regex.Match] {
@@ -326,7 +344,7 @@ class MathematicaParser extends RegexParsers with PackratParsers {
             val args = head :: tail
             Builtins.Times(args: _*)
     }
-    lazy val mulExplicit: PackratParser[Expr] = mulExpr ~ rep1(("*" | "/") ~ mulExpr) ^^ {
+    lazy val mulExplicit: PackratParser[Expr] = mulExpr ~ rep1(("*" | notFollowedBy("/", ';')) ~ mulExpr) ^^ {
         case head ~ tail =>
             val args = head :: tail.map {
                 case "*" ~ expr => expr
@@ -352,30 +370,7 @@ class MathematicaParser extends RegexParsers with PackratParsers {
     lazy val negExpr: PackratParser[Expr] =
         exp | factorial | part | test | tightest
 
-    lazy val factorialPostfix: PackratParser[String] = new Parser[String] {
-        // NOTE: This code is roughly equivalent to: "!!" | ("!" & not("!=")),
-        // but Scala parser combinators don't allow this, so we have to achieve
-        // this the longer way (extending Parser[T]).
-        def apply(in: Input) = {
-            val source = in.source
-            val offset = in.offset
-            val start = handleWhiteSpace(source, offset)
-            if (start < source.length && source.charAt(start) == '!') {
-                if (start + 1 < source.length) {
-                    source.charAt(start + 1) match {
-                        case '=' => Failure("`!=' not allowed in this context", in.drop(start - offset))
-                        case '!' => Success("!!", in.drop(start + 2 - offset))
-                        case  _  => Success("!", in.drop(start + 1 - offset))
-                    }
-                } else {
-                    Success("!", in.drop(start + 1 - offset))
-                }
-            } else {
-                Failure("expected ! or !!", in.drop(start - offset))
-            }
-        }
-    }
-    lazy val factorial: PackratParser[Expr] = (factorial | factorialExpr) ~ factorialPostfix ^^ {
+    lazy val factorial: PackratParser[Expr] = (factorial | factorialExpr) ~ ("!!" | notFollowedBy("!", '=')) ^^ {
         case expr ~ "!"  => Builtins.Factorial(expr)
         case expr ~ "!!" => Builtins.Factorial2(expr)
     }

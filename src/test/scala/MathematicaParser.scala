@@ -1,9 +1,44 @@
 package org.sympy.parsing.mathematica.tests
 
 import org.specs2.mutable.Specification
+import org.specs2.matcher.ParserMatchers
+import scala.util.parsing.combinator.RegexParsers
 
-import org.sympy.parsing.mathematica.{MathematicaParser,ParseResult,ParseError}
+import org.sympy.parsing.mathematica.{MathematicaParser,ParseResult,ParseError,ExtraParsers}
 import org.sympy.parsing.mathematica.{Expr,Sym,Num,Str,Eval,Builtins,Singletons,Implicits}
+
+class ExtraParsersSuite extends Specification with ParserMatchers {
+
+    object TestParser extends RegexParsers with ExtraParsers {
+        def rule0: Parser[Any] = rule2 | rule3
+        def rule1: Parser[Any] = "!!" | notFollowedBy("!", '=', '~')
+        def rule2: Parser[Any] = rule1 ~ "=" ~ "\\d+".r
+        def rule3: Parser[Any] = rule1 ~ "~" ~ "[a-z]+".r
+    }
+
+    val parsers = TestParser
+
+    "Extra parsers" should {
+        "Implement notFollowedBy()" in {
+            import TestParser.{rule0,rule1}
+
+            rule1 must succeedOn("!")
+            rule1 must failOn("!=")
+            rule1 must failOn("!~")
+            rule1 must succeedOn("!!")
+            rule1 must succeedOn("!!=").partially
+            rule1 must succeedOn("!!~").partially
+            rule0 must succeedOn("! =127")
+            rule0 must succeedOn("! ~abc")
+            rule0 must succeedOn("! = 127")
+            rule0 must succeedOn("! ~ abc")
+            rule0 must failOn("!=127")
+            rule0 must failOn("!~abc")
+            rule0 must failOn("!= 127")
+            rule0 must failOn("!~ abc")
+        }
+    }
+}
 
 class MathematicaParserSuite extends Specification {
     import MathematicaParser.parse
@@ -40,7 +75,7 @@ class MathematicaParserSuite extends Specification {
             Span(1, All).toPrettyForm === "Span[1, All]"
         }
 
-        "Have produce readable output from toString" in {
+        "Produce readable output from toString" in {
             Plus(1, 2, 3).toString === "Plus(Num(1), Num(2), Num(3))"
             Plus('x, 'y, 'z).toString === "Plus(Sym(x), Sym(y), Sym(z))"
             Plus(1, Power(2, 3)).toString === "Plus(Num(1), Power(Num(2), Num(3)))"
