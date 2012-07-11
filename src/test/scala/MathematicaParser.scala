@@ -408,6 +408,21 @@ class MathematicaParserSuite extends Specification {
             // "_[[0]] ? Positive[[1]]"    ~== Part(PatternTest(Part(Blank(), 0), 'Positive), 1)
         }
 
+        "Parse condition operator: a /; b" in {
+            "x /; y"                ~== Condition('x, 'y)
+            "x /; y /; z"           ~== Condition(Condition('x, 'y), 'z)
+            "-x /; y /; z"          ~== Condition(Condition(Times(-1, 'x), 'y), 'z)
+            "x + 127 /; y! /; z"    ~== Condition(Condition(Plus('x, 127), Factorial('y)), 'z)
+            "127 x /; y! /; z == t" ~== Condition(Condition(Times(127, 'x), Factorial('y)), Equal('z, 't))
+            "a x /; y! /; z ? t"    ~== Condition(Condition(Times('a , 'x), Factorial('y)), PatternTest('z, 't))
+            "x^127 /; y! /; z || t" ~== Condition(Condition(Power('x, 127), Factorial('y)), Or('z, 't))
+            "!x /; y! /; z == t"    ~== Condition(Condition(Not('x), Factorial('y)), Equal('z, 't))
+
+            "x -> t /; y /; z"      ~== Rule('x, Condition(Condition('t, 'y), 'z))
+            "x /; y -> t /; z"      ~== Rule(Condition('x, 'y), Condition('t, 'z))
+            "x /; y /; z -> t"      ~== Rule(Condition(Condition('x, 'y), 'z), 't)
+        }
+
         "Deal with errors" in {
             parse("1 + ") must beLike {
                 case ParseError(msg, file, pos) =>
