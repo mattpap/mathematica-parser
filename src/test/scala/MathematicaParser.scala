@@ -482,6 +482,23 @@ class MathematicaParserSuite extends Specification {
             "(f + g)[x]^h[a, b]"    ~== Power(Eval(Plus('f, 'g), 'x), Eval('h, 'a, 'b))
         }
 
+        "Parse derivatives (Lagrange's notation): f'''[t]" in {
+            "f'"                    ~== Derivative(1)('f)
+            "f''"                   ~== Derivative(2)('f)
+            "f'''"                  ~== Derivative(3)('f)
+            "f''''"                 ~== Derivative(4)('f)
+            "f''' ' ''''"           ~== Derivative(4)(Derivative(1)(Derivative(3)('f)))
+            // "f'[t]"                 ~== Derivative(1)('f)('t)
+            "f + g'"                ~== Plus('f, Derivative(1)('g))
+            "f g'"                  ~== Times('f, Derivative(1)('g))
+            "f^g'"                  ~== Power('f, Derivative(1)('g))
+            "f[t]'"                 ~== Derivative(1)(Eval('f, 't))
+            "f!'"                   ~== Derivative(1)(Factorial('f))
+            "f[[0]]'"               ~== Derivative(1)(Part('f, 0))
+            "f?g'"                  ~== Derivative(1)(PatternTest('f, 'g))
+            "(f + g)'"              ~== Derivative(1)(Plus('f, 'g))
+        }
+
         "Deal with errors" in {
             parse("1 + ") must beLike {
                 case ParseError(msg, file, pos) =>
