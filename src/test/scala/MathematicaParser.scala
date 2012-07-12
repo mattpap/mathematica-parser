@@ -460,6 +460,28 @@ class MathematicaParserSuite extends Specification {
             "x /; y /; z -> t"      ~== Rule(Condition(Condition('x, 'y), 'z), 't)
         }
 
+        "Parse functional evaluation: f[x], (f + g)[x][y][z]" in {
+            "f[x]"                  ~== Eval('f, 'x)
+            "f[x, y]"               ~== Eval('f, 'x, 'y)
+            "f[x, y, z]"            ~== Eval('f, 'x, 'y, 'z)
+            "f[x][y]"               ~== Eval(Eval('f, 'x), 'y)
+            "f[x][y][z]"            ~== Eval(Eval(Eval('f, 'x), 'y), 'z)
+            "f[x][x, y]"            ~== Eval(Eval('f, 'x), 'x, 'y)
+            "f[x][x, y][x, y, z]"   ~== Eval(Eval(Eval('f, 'x), 'x, 'y), 'x, 'y, 'z)
+            "f[g[x]]"               ~== Eval('f, Eval('g, 'x))
+            "f[g[h[x, y, z][t]]]"   ~== Eval('f, Eval('g, Eval(Eval('h, 'x, 'y, 'z), 't)))
+            // "f[x][y, z][[0]]"       ~== Part(Eval(Eval('f, 'x), 'y, 'z), 0)
+
+            "f + g[x]"              ~== Plus('f, Eval('g, 'x))
+            "f g[x]"                ~== Times('f, Eval('g, 'x))
+            "f^g[x]"                ~== Power('f, Eval('g, 'x))
+            "f![x]"                 ~== Eval(Factorial('f), 'x)
+            "f[[0]][x]"             ~== Eval(Part('f, 0), 'x)
+            "f ? g[x]"              ~== Eval(PatternTest('f, 'g), 'x)
+            "(f + g)[x]"            ~== Eval(Plus('f, 'g), 'x)
+            "(f + g)[x]^h[a, b]"    ~== Power(Eval(Plus('f, 'g), 'x), Eval('h, 'a, 'b))
+        }
+
         "Deal with errors" in {
             parse("1 + ") must beLike {
                 case ParseError(msg, file, pos) =>
