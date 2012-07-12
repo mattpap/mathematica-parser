@@ -518,6 +518,13 @@ class MathematicaParserSuite extends Specification {
             "a . b ^ c"             ~== Dot('a, Power('b, 'c))
         }
 
+        "Parse functions: # + 1 &" in {
+            "#&"                    ~== Function(Slot(1))
+            "a + b &"               ~== Function(Plus('a, 'b))
+            "a b &"                 ~== Function(Times('a, 'b))
+            // "a + b & + 1"           ~== Plus(Function(Plus('a, 'b)), 1)
+        }
+
         "Deal with errors" in {
             parse("1 + ") must beLike {
                 case ParseError(msg, file, pos) =>

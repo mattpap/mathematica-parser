@@ -106,6 +106,7 @@ object Builtins {
     case class PreDecrement(args: Expr*) extends Builtin
     case class Derivative(args: Expr*) extends Builtin
     case class Dot(args: Expr*) extends Builtin
+    case class Function(args: Expr*) extends Builtin
 }
 
 object Singletons {
@@ -217,6 +218,7 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         // Precedence in increasing order:
         compound  | // infix, flat  :  ;
         assign    | // infix, right :  = := += -= *= /=
+        func      | // postfix      :  &
         replace   | // infix, left  :  /.
         rule      | // infix, right :  ->
         cond      | // infix, left  :  /;
@@ -252,7 +254,7 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         case elem ~ _ => Builtins.CompoundExpression(elem, Singletons.Null)
     }
     lazy val compoundExpr: PackratParser[Expr] =
-        assign | replace | rule | cond | or | and | not | same | cmp | span | add | mul | dot | exp | neg | deriv | eval | dec | inc | factorial | part | test | tightest
+        assign | func | replace | rule | cond | or | and | not | same | cmp | span | add | mul | dot | exp | neg | deriv | eval | dec | inc | factorial | part | test | tightest
 
     lazy val assign: PackratParser[Expr] = assignExpr ~ ("=" | ":=" | "+=" | "-=" | "*=" | "/=") ~ (assign | assignExpr) ^^ {
         case lhs ~  "=" ~ rhs => Builtins.Set(lhs, rhs)
@@ -263,6 +265,12 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         case lhs ~ "/=" ~ rhs => Builtins.DivideBy(lhs, rhs)
     }
     lazy val assignExpr: PackratParser[Expr] =
+        func | replace | rule | cond | or | and | not | same | cmp | span | add | mul | dot | exp | neg | deriv | eval | dec | inc | factorial | part | test | tightest
+
+    lazy val func: PackratParser[Expr] = (func | funcExpr) ~ notFollowedBy("&", '&') ^^ {
+        case expr ~ _ => Builtins.Function(expr)
+    }
+    lazy val funcExpr: PackratParser[Expr] =
         replace | rule | cond | or | and | not | same | cmp | span | add | mul | dot | exp | neg | deriv | eval | dec | inc | factorial | part | test | tightest
 
     lazy val replace: PackratParser[Expr] = (replace | replaceExpr) ~ "/." ~ replaceExpr ^^ {
