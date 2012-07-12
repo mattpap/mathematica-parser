@@ -170,28 +170,30 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         }
     }
 
+    type ExprParser = PackratParser[Expr]
+
     import Implicits._
 
     protected val name = "[a-zA-Z][a-zA-Z0-9]*"
 
     lazy val ident: PackratParser[String] = regex(name.r)
 
-    lazy val pattern: PackratParser[Expr] =
+    lazy val pattern: ExprParser =
         log(symbolBlankWithHead | symbolBlank | symbol | blankWithHead | blank)("pattern")
 
-    lazy val blank: PackratParser[Expr] = "_" ^^ {
+    lazy val blank: ExprParser = "_" ^^ {
         case _ => Builtins.Blank()
     }
-    lazy val blankWithHead: PackratParser[Expr] = regexMatch(s"_($name)".r) ^^ {
+    lazy val blankWithHead: ExprParser = regexMatch(s"_($name)".r) ^^ {
         case Regex.Groups(head) => Builtins.Blank(Sym(head))
     }
-    lazy val symbol: PackratParser[Expr] = regexMatch(s"($name)".r) ^^ {
+    lazy val symbol: ExprParser = regexMatch(s"($name)".r) ^^ {
         case Regex.Groups(name) => Sym(name)
     }
-    lazy val symbolBlank: PackratParser[Expr] = regexMatch(s"($name)_".r) ^^ {
+    lazy val symbolBlank: ExprParser = regexMatch(s"($name)_".r) ^^ {
         case Regex.Groups(name) => Builtins.Pattern(Sym(name), Builtins.Blank())
     }
-    lazy val symbolBlankWithHead: PackratParser[Expr] = regexMatch(s"($name)_($name)".r) ^^ {
+    lazy val symbolBlankWithHead: ExprParser = regexMatch(s"($name)_($name)".r) ^^ {
         case Regex.Groups(name, head) => Builtins.Pattern(Sym(name), Builtins.Blank(Sym(head)))
     }
 
@@ -203,69 +205,80 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         case value => Str(value.stripPrefix("\"").stripSuffix("\"").replace("\\\\\"", "\""))
     }
 
-    lazy val out: PackratParser[Expr] = outNumber | outClassic
-    lazy val outNumber: PackratParser[Expr] = "%\\d+".r ^^ {
+    lazy val out: ExprParser = outNumber | outClassic
+    lazy val outNumber: ExprParser = "%\\d+".r ^^ {
         case value => Builtins.Out(Num(value.stripPrefix("%")))
     }
-    lazy val outClassic: PackratParser[Expr] = "%+".r ^^ {
+    lazy val outClassic: ExprParser = "%+".r ^^ {
         case "%"   => Builtins.Out()
         case value => Builtins.Out(Num(s"-${value.length}"))
     }
 
-    lazy val slot: PackratParser[Expr] = regexMatch("(#{1,2})(\\d*)".r) ^^ {
+    lazy val slot: ExprParser = regexMatch("(#{1,2})(\\d*)".r) ^^ {
         case Regex.Groups("#",  "")    => Builtins.Slot(1)
         case Regex.Groups("#",  index) => Builtins.Slot(index.toInt)
         case Regex.Groups("##", "")    => Builtins.SlotSequence(1)
         case Regex.Groups("##", index) => Builtins.SlotSequence(index.toInt)
     }
 
-    lazy val list: PackratParser[Expr] = "{" ~ repsep(expr, ",") ~ "}" ^^ {
+    lazy val list: ExprParser = "{" ~ repsep(expr, ",") ~ "}" ^^ {
         case "{" ~ elems ~ "}" => Builtins.List(elems: _*)
     }
 
-    lazy val expr: PackratParser[Expr] =
-        // Precedence in increasing order:
-        compound  | // infix, flat  :  ;
-        assign    | // infix, right :  = := += -= *= /=
-        func      | // postfix      :  &
-        replace   | // infix, left  :  /.
-        rule      | // infix, right :  ->
-        cond      | // infix, left  :  /;
-        or        | // infix, flat  :  ||
-        and       | // infix, flat  :  &&
-        not       | // prefix       :  !
-        same      | // infix, flat  :  ===
-        cmp       | // infix, flat  :  == != <= < >= >
-        span      | // infix, none  :  ;;
-        add       | // infix, flat  :  + -
-        mul       | // infix, flat  :  * /
-        dot       | // infix, flat  :  .
-        neg       | // prefix       :  -
-        exp       | // infix, right :  ^
-        deriv     | // postifx      :  '
-        eval      | // postfix      :  []
-        dec       | // postfix      :  --
-        inc       | // postfix      :  ++
-        factorial | // postfix      :  ! !!
-        part      | // postfix      :  [[]]
-        test      | // infix, none  :  ?
-        tightest
+    def rules(n: Int = 0): ExprParser =
+        precedence.drop(n).reduce(_ | _)
 
-    lazy val compound: PackratParser[Expr] = log(complexCompound | simpleCompound)("compound")
+    def rulesFrom(p: ExprParser): ExprParser =
+        precedence.dropWhile(p != _).reduce(_ | _)
+
+    def rulesFrom(p: ExprParser, drop: ExprParser): ExprParser =
+        precedence.dropWhile(p != _).filterNot(_ == drop).reduce(_ | _)
+
+    // Precedence in increasing order:
+    val precedence: List[ExprParser] =
+        compound  :: // infix, flat  :  ;
+        assign    :: // infix, right :  = := += -= *= /=
+        func      :: // postfix      :  &
+        replace   :: // infix, left  :  /.
+        rule      :: // infix, right :  ->
+        cond      :: // infix, left  :  /;
+        or        :: // infix, flat  :  ||
+        and       :: // infix, flat  :  &&
+        not       :: // prefix       :  !
+        same      :: // infix, flat  :  ===
+        cmp       :: // infix, flat  :  == != <= < >= >
+        span      :: // infix, none  :  ;;
+        add       :: // infix, flat  :  + -
+        mul       :: // infix, flat  :  * /
+        dot       :: // infix, flat  :  .
+        neg       :: // prefix       :  -
+        exp       :: // infix, right :  ^
+        deriv     :: // postifx      :  '
+        eval      :: // postfix      :  []
+        dec       :: // postfix      :  --
+        inc       :: // postfix      :  ++
+        factorial :: // postfix      :  ! !!
+        part      :: // postfix      :  [[]]
+        test      :: // infix, none  :  ?
+        tightest  ::
+        Nil
+
+    lazy val expr: ExprParser = rules()
+
+    lazy val compound: ExprParser = log(complexCompound | simpleCompound)("compound")
     lazy val semicolon: PackratParser[String] = notFollowedBy(";", ';')
-    lazy val complexCompound: PackratParser[Expr] = compoundExpr ~ semicolon ~ rep1sep(compoundExpr, semicolon) ~ opt(semicolon) ^^ {
+    lazy val complexCompound: ExprParser = compoundExpr ~ semicolon ~ rep1sep(compoundExpr, semicolon) ~ opt(semicolon) ^^ {
         case elem ~ _ ~ elems ~ None =>
             Builtins.CompoundExpression(elem :: elems: _*)
         case elem ~ _ ~ elems ~ _ =>
             Builtins.CompoundExpression((elem :: elems) :+ Singletons.Null: _*)
     }
-    lazy val simpleCompound: PackratParser[Expr] = compoundExpr ~ semicolon ^^ {
+    lazy val simpleCompound: ExprParser = compoundExpr ~ semicolon ^^ {
         case elem ~ _ => Builtins.CompoundExpression(elem, Singletons.Null)
     }
-    lazy val compoundExpr: PackratParser[Expr] =
-        assign | func | replace | rule | cond | or | and | not | same | cmp | span | add | mul | dot | neg | exp | deriv | eval | dec | inc | factorial | part | test | tightest
+    lazy val compoundExpr: ExprParser = rulesFrom(assign)
 
-    lazy val assign: PackratParser[Expr] = log(assignExpr ~ ("=" | ":=" | "+=" | "-=" | "*=" | "/=") ~ (assign | assignExpr))("assign") ^^ {
+    lazy val assign: ExprParser = log(assignExpr ~ ("=" | ":=" | "+=" | "-=" | "*=" | "/=") ~ (assign | assignExpr))("assign") ^^ {
         case lhs ~  "=" ~ rhs => Builtins.Set(lhs, rhs)
         case lhs ~ ":=" ~ rhs => Builtins.SetDelayed(lhs, rhs)
         case lhs ~ "+=" ~ rhs => Builtins.AddTo(lhs, rhs)
@@ -273,56 +286,47 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         case lhs ~ "*=" ~ rhs => Builtins.TimesBy(lhs, rhs)
         case lhs ~ "/=" ~ rhs => Builtins.DivideBy(lhs, rhs)
     }
-    lazy val assignExpr: PackratParser[Expr] =
-        func | replace | rule | cond | or | and | not | same | cmp | span | add | mul | dot | neg | exp | deriv | eval | dec | inc | factorial | part | test | tightest
+    lazy val assignExpr: ExprParser = rulesFrom(func)
 
-    lazy val func: PackratParser[Expr] = log((func | funcExpr) ~ notFollowedBy("&", '&'))("func") ^^ {
+    lazy val func: ExprParser = log((func | funcExpr) ~ notFollowedBy("&", '&'))("func") ^^ {
         case expr ~ _ => Builtins.Function(expr)
     }
-    lazy val funcExpr: PackratParser[Expr] =
-        replace | rule | cond | or | and | not | same | cmp | span | add | mul | dot | neg | exp | deriv | eval | dec | inc | factorial | part | test | tightest
+    lazy val funcExpr: ExprParser = rulesFrom(replace)
 
-    lazy val replace: PackratParser[Expr] = log((replace | replaceExpr) ~ "/." ~ replaceExpr)("replace") ^^ {
+    lazy val replace: ExprParser = log((replace | replaceExpr) ~ "/." ~ replaceExpr)("replace") ^^ {
         case lhs ~ _ ~ rhs => Builtins.ReplaceAll(lhs, rhs)
     }
-    lazy val replaceExpr: PackratParser[Expr] =
-        rule | cond | or | and | not | same | cmp | span | add | mul | dot | neg | exp | deriv | eval | dec | inc | factorial | part | test | tightest
+    lazy val replaceExpr: ExprParser = rulesFrom(rule)
 
-    lazy val rule: PackratParser[Expr] = log(ruleExpr ~ "->" ~ (rule | ruleExpr))("rule") ^^ {
+    lazy val rule: ExprParser = log(ruleExpr ~ "->" ~ (rule | ruleExpr))("rule") ^^ {
         case lhs ~ _ ~ rhs => Builtins.Rule(lhs, rhs)
     }
-    lazy val ruleExpr: PackratParser[Expr] =
-        cond | or | and | not | same | cmp | span | add | mul | dot | neg | exp | deriv | eval | dec | inc | factorial | part | test | tightest
+    lazy val ruleExpr: ExprParser = rulesFrom(cond)
 
-    lazy val cond: PackratParser[Expr] = log((cond | condExpr) ~ "/;" ~ condExpr)("cond") ^^ {
+    lazy val cond: ExprParser = log((cond | condExpr) ~ "/;" ~ condExpr)("cond") ^^ {
         case lhs ~ _ ~ rhs => Builtins.Condition(lhs, rhs)
     }
-    lazy val condExpr: PackratParser[Expr] =
-        or | and | not | same | cmp | span | add | mul | dot | neg | exp | deriv | eval | dec | inc | factorial | part | test | tightest
+    lazy val condExpr: ExprParser = rulesFrom(or)
 
-    lazy val or: PackratParser[Expr] = log(orExpr ~ rep1("||" ~> orExpr))("or") ^^ {
+    lazy val or: ExprParser = log(orExpr ~ rep1("||" ~> orExpr))("or") ^^ {
         case head ~ tail => Builtins.Or(head :: tail: _*)
     }
-    lazy val orExpr: PackratParser[Expr] =
-        and | not | same | cmp | span | add | mul | dot | neg | exp | deriv | eval | dec | inc | factorial | part | test | tightest
+    lazy val orExpr: ExprParser = rulesFrom(and)
 
-    lazy val and: PackratParser[Expr] = log(andExpr ~ rep1("&&" ~> andExpr))("and") ^^ {
+    lazy val and: ExprParser = log(andExpr ~ rep1("&&" ~> andExpr))("and") ^^ {
         case head ~ tail => Builtins.And(head :: tail: _*)
     }
-    lazy val andExpr: PackratParser[Expr] =
-        not | same | cmp | span | add | mul | dot | neg | exp | deriv | eval | dec | inc | factorial | part | test | tightest
+    lazy val andExpr: ExprParser = rulesFrom(not)
 
-    lazy val not: PackratParser[Expr] = log(notFollowedBy("!", '=') ~ (not | notExpr))("not") ^^ {
+    lazy val not: ExprParser = log(notFollowedBy("!", '=') ~ (not | notExpr))("not") ^^ {
         case _ ~ expr => Builtins.Not(expr)
     }
-    lazy val notExpr: PackratParser[Expr] =
-        same | cmp | span | add | mul | dot | neg | exp | deriv | eval | dec | inc | factorial | part | test | tightest
+    lazy val notExpr: ExprParser = rulesFrom(same)
 
-    lazy val same: PackratParser[Expr] = log(sameExpr ~ rep1("===" ~> (not | sameExpr)))("same") ^^ {
+    lazy val same: ExprParser = log(sameExpr ~ rep1("===" ~> (not | sameExpr)))("same") ^^ {
         case head ~ tail => Builtins.SameQ(head :: tail: _*)
     }
-    lazy val sameExpr: PackratParser[Expr] =
-        cmp | span | add | mul | dot | neg | exp | deriv | eval | dec | inc | factorial | part | test | tightest
+    lazy val sameExpr: ExprParser = rulesFrom(cmp)
 
     protected def evalCmpOp(op: String, args: Expr*): Builtin = (op match {
         case "==" => Builtins.Equal
@@ -333,7 +337,7 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         case ">"  => Builtins.Greater
     })(args: _*)
 
-    lazy val cmp: PackratParser[Expr] = log(cmpExpr ~ rep1(("==" | "!="  | "<=" | "<" | ">=" | ">") ~ cmpExpr))("cmp") ^^ {
+    lazy val cmp: ExprParser = log(cmpExpr ~ rep1(("==" | "!="  | "<=" | "<" | ">=" | ">") ~ cmpExpr))("cmp") ^^ {
         case head ~ tail =>
             tail.collect { case op ~ _ => op }.distinct match {
                 case op :: Nil =>
@@ -348,11 +352,10 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
                     Builtins.Inequality(args: _*)
             }
     }
-    lazy val cmpExpr: PackratParser[Expr] =
-        span | add | mul | dot | neg | exp | deriv | eval | dec | inc | factorial | part | test | tightest
+    lazy val cmpExpr: ExprParser = rulesFrom(span)
 
-    lazy val span: PackratParser[Expr] = log(spanParser)("span")
-    lazy val spanParser: PackratParser[Expr] =
+    lazy val span: ExprParser = log(spanParser)("span")
+    lazy val spanParser: ExprParser =
         spanExpr ~ ";;" ~ spanExpr ~ ";;" ~ spanExpr ^^ { case i ~ _ ~ j ~ _ ~ k => Builtins.Span(i, j, k)              } |
         spanExpr ~ ";;"            ~ ";;" ~ spanExpr ^^ { case i ~ _     ~ _ ~ k => Builtins.Span(i, Singletons.All, k) } |
                    ";;" ~ spanExpr ~ ";;" ~ spanExpr ^^ { case     _ ~ j ~ _ ~ k => Builtins.Span(1, j, k)              } |
@@ -361,9 +364,9 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         spanExpr ~ ";;"                              ^^ { case i ~ _             => Builtins.Span(i, Singletons.All)    } |
                    ";;" ~ spanExpr                   ^^ { case     _ ~ j         => Builtins.Span(1, j)                 } |
                    ";;"                              ^^ { case     _             => Builtins.Span(1, Singletons.All)    }
-    lazy val spanExpr: PackratParser[Expr] = add | mul | dot | neg | exp | deriv | eval | dec | inc | factorial | part | test | tightest
+    lazy val spanExpr: ExprParser = rulesFrom(add)
 
-    lazy val add: PackratParser[Expr] = log(addExpr ~ rep1(("+" | "-") ~ addExpr))("add") ^^ {
+    lazy val add: ExprParser = log(addExpr ~ rep1(("+" | "-") ~ addExpr))("add") ^^ {
         case head ~ tail =>
             val args = head :: tail.map {
                 case "+" ~ expr       => expr
@@ -372,16 +375,15 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
             }
             Builtins.Plus(args: _*)
     }
-    lazy val addExpr: PackratParser[Expr] =
-        mul | dot | neg | exp | deriv | eval | dec | inc | factorial | part | test | tightest
+    lazy val addExpr: ExprParser = rulesFrom(mul)
 
-    lazy val mul: PackratParser[Expr] = log(mulImplied | mulExplicit)("mul")
-    lazy val mulImplied: PackratParser[Expr] = mulExpr ~ rep1(mulImpliedRhsExpr) ^^ {
+    lazy val mul: ExprParser = log(mulImplied | mulExplicit)("mul")
+    lazy val mulImplied: ExprParser = mulExpr ~ rep1(mulImpliedRhsExpr) ^^ {
         case head ~ tail =>
             val args = head :: tail
             Builtins.Times(args: _*)
     }
-    lazy val mulExplicit: PackratParser[Expr] = mulExpr ~ rep1(("*" | notFollowedBy("/", ';', '.')) ~ mulExpr) ^^ {
+    lazy val mulExplicit: ExprParser = mulExpr ~ rep1(("*" | notFollowedBy("/", ';', '.')) ~ mulExpr) ^^ {
         case head ~ tail =>
             val args = head :: tail.map {
                 case "*" ~ expr => expr
@@ -389,66 +391,64 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
             }
             Builtins.Times(args: _*)
     }
-    lazy val mulImpliedRhsExpr: PackratParser[Expr] =
-        /*not | */dot | /*neg | */ exp | deriv | eval | dec | inc | factorial | part | test | tightest
-    lazy val mulExpr: PackratParser[Expr] =
-        /*not | */dot |   neg |    exp | deriv | eval | dec | inc | factorial | part | test | tightest
+    // TODO: what about `not'?
+    lazy val mulImpliedRhsExpr: ExprParser = rulesFrom(dot, drop=neg)
+    lazy val mulExpr: ExprParser = rulesFrom(dot)
 
-    lazy val dot: PackratParser[Expr] = log(dotExpr ~ rep1("." ~> dotExpr))("dot") ^^ {
+    lazy val dot: ExprParser = log(dotExpr ~ rep1("." ~> dotExpr))("dot") ^^ {
         case head ~ tail => Builtins.Dot(head :: tail: _*)
     }
-    lazy val dotExpr: PackratParser[Expr] = exp | deriv | eval | dec | inc | factorial | part | test | tightest
+    lazy val dotExpr: ExprParser = rulesFrom(neg)
 
-    lazy val neg: PackratParser[Expr] = log("-" ~ (neg | negExpr))("neg") ^^ {
+    lazy val neg: ExprParser = log("-" ~ (neg | negExpr))("neg") ^^ {
         case _ ~ Num(value) => Num(s"-$value")
         case _ ~ expr => Builtins.Times(-1, expr)
     }
-    lazy val negExpr: PackratParser[Expr] =
-        exp | deriv | eval | dec | inc | factorial | part | test | tightest
+    lazy val negExpr: ExprParser = rulesFrom(exp)
 
-    lazy val exp: PackratParser[Expr] = log(expLhsExpr ~ "^" ~ (exp | expRhsExpr))("exp") ^^ {
+    lazy val exp: ExprParser = log(expLhsExpr ~ "^" ~ (exp | expRhsExpr))("exp") ^^ {
         case lhs ~ _ ~ rhs => Builtins.Power(lhs, rhs)
     }
-    lazy val expLhsExpr: PackratParser[Expr] = deriv | eval | dec | inc | factorial | part | test | tightest
-    lazy val expRhsExpr: PackratParser[Expr] = neg | expLhsExpr
+    lazy val expLhsExpr: ExprParser = rulesFrom(deriv)
+    lazy val expRhsExpr: ExprParser = neg | expLhsExpr
 
-    lazy val deriv: PackratParser[Expr] = log((deriv | derivExpr) ~ "'+".r)("deriv") ^^ {
+    lazy val deriv: ExprParser = log((deriv | derivExpr) ~ "'+".r)("deriv") ^^ {
         case expr ~ ticks => Eval(Builtins.Derivative(ticks.length), expr)
     }
-    lazy val derivExpr: PackratParser[Expr] = eval | dec | inc | factorial | part | test | tightest
+    lazy val derivExpr: ExprParser = rulesFrom(eval)
 
-    lazy val eval: PackratParser[Expr] = log((eval | evalExpr) ~ (notFollowedBy("[", '[') ~> repsep(expr, ",") <~ "]"))("eval") ^^ {
+    lazy val eval: ExprParser = log((eval | evalExpr) ~ (notFollowedBy("[", '[') ~> repsep(expr, ",") <~ "]"))("eval") ^^ {
         // TODO: this has to be automated (e.g. with reflection)
         case Sym("Exp") ~ args => Builtins.Exp(args: _*)
         case head       ~ args => Eval(head, args: _*)
     }
-    lazy val evalExpr: PackratParser[Expr] = dec | inc | factorial | part | test | tightest
+    lazy val evalExpr: ExprParser = rulesFrom(dec)
 
-    lazy val inc: PackratParser[Expr] = failure("inc") // log(failure("inc"))("inc")
-    lazy val dec: PackratParser[Expr] = failure("dec") // log(failure("dec"))("inc")
+    lazy val inc: ExprParser = failure("inc") // log(failure("inc"))("inc")
+    lazy val dec: ExprParser = failure("dec") // log(failure("dec"))("inc")
 
-    lazy val factorial: PackratParser[Expr] = log((factorial | factorialExpr) ~ ("!!" | notFollowedBy("!", '=')))("factorial") ^^ {
+    lazy val factorial: ExprParser = log((factorial | factorialExpr) ~ ("!!" | notFollowedBy("!", '=')))("factorial") ^^ {
         case expr ~ "!"  => Builtins.Factorial(expr)
         case expr ~ "!!" => Builtins.Factorial2(expr)
     }
-    lazy val factorialExpr: PackratParser[Expr] = part | test | tightest
+    lazy val factorialExpr: ExprParser = rulesFrom(part)
 
-    lazy val part: PackratParser[Expr] = log((part | partExpr) ~ "[[" ~ repsep(expr, ",") ~ "]]")("part") ^^ {
+    lazy val part: ExprParser = log((part | partExpr) ~ "[[" ~ repsep(expr, ",") ~ "]]")("part") ^^ {
         case expr ~ _ ~ indices ~ _ => Builtins.Part(expr :: indices: _*)
     }
-    lazy val partExpr: PackratParser[Expr] = test | tightest
+    lazy val partExpr: ExprParser = rulesFrom(test)
 
-    lazy val test: PackratParser[Expr] = log(testExpr ~ "?" ~ testExpr)("test") ^^ {
+    lazy val test: ExprParser = log(testExpr ~ "?" ~ testExpr)("test") ^^ {
         case lhs ~ _ ~ rhs => Builtins.PatternTest(lhs, rhs)
     }
-    lazy val testExpr: PackratParser[Expr] = tightest
+    lazy val testExpr: ExprParser = rulesFrom(tightest)
 
-    lazy val tightest: PackratParser[Expr] = log(group | value)("tightest")
+    lazy val tightest: ExprParser = log(group | value)("tightest")
 
-    lazy val group: PackratParser[Expr] = "(" ~> expr <~ ")"
-    lazy val value: PackratParser[Expr] = list | slot | out | pattern | number | str
+    lazy val group: ExprParser = "(" ~> expr <~ ")"
+    lazy val value: ExprParser = list | slot | out | pattern | number | str
 
-    lazy val mathematica: PackratParser[Expr] = expr
+    lazy val mathematica: ExprParser = expr
 }
 
 sealed trait ParseOutput {
