@@ -464,7 +464,16 @@ object MathematicaParser {
 
 object FileUtils {
     def readFromFile(file: File): String =
-        Source.fromFile(file).mkString("\n")
+        Source.fromFile(file).mkString("")
+}
+
+object TimeUtils {
+    def timed[T](code: => T): (T, Long) = {
+        val start = System.currentTimeMillis
+        val result = code
+        val end = System.currentTimeMillis
+        (result, end - start)
+    }
 }
 
 object Main extends App {
