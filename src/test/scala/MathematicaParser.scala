@@ -499,6 +499,14 @@ class MathematicaParserSuite extends Specification {
             "(f + g)'"              ~== Derivative(1)(Plus('f, 'g))
         }
 
+        "Parse dot product: a . b" in {
+            "a . b"                 ~== Dot('a, 'b)
+            "a . b . c"             ~== Dot('a, 'b, 'c)
+            "a . b . c . d"         ~== Dot('a, 'b, 'c, 'd)
+            "a * b . c . d * e"     ~== Times('a, Dot('b, 'c, 'd), 'e)
+            "a . b ^ c"             ~== Dot('a, Power('b, 'c))
+        }
+
         "Deal with errors" in {
             parse("1 + ") must beLike {
                 case ParseError(msg, file, pos) =>
