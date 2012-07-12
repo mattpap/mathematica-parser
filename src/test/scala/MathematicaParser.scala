@@ -53,19 +53,19 @@ class MathematicaParserSuite extends Specification {
 
     "Mathematica's language ASTs" should {
         "Support implicit conversions" in {
-            Eval("Some", 17) === Eval("Some", Num("17"))
-            Eval("Some", 1.7) === Eval("Some", Num("1.7"))
-            Eval("Some", "str") === Eval("Some", Str("str"))
-            Eval("Some", 'xyz) === Eval("Some", Sym("xyz"))
-            Eval("Some", true) === Eval("Some", True)
-            Eval("Some", false) === Eval("Some", False)
+            Eval('f, 17) === Eval('f, Num("17"))
+            Eval('f, 1.7) === Eval('f, Num("1.7"))
+            Eval('f, "str") === Eval('f, Str("str"))
+            Eval('f, 'xyz) === Eval('f, Sym("xyz"))
+            Eval('f, true) === Eval('f, True)
+            Eval('f, false) === Eval('f, False)
         }
 
         "Have head attribute matching AST class name" in {
-            Plus(1, 2, 3).head === "Plus"
-            Times(1, 2, 3).head === "Times"
-            Power(1, 2).head === "Power"
-            All.head === "All"
+            Plus(1, 2, 3).head === Sym("Plus")
+            Times(1, 2, 3).head === Sym("Times")
+            Power(1, 2).head === Sym("Power")
+            All.head === Sym("All")
         }
 
         "Allow to pretty print themselves" in {
@@ -73,6 +73,7 @@ class MathematicaParserSuite extends Specification {
             Plus('x, 'y, 'z).toPrettyForm === "Plus[x, y, z]"
             Plus(1, Power(2, 3)).toPrettyForm === "Plus[1, Power[2, 3]]"
             Span(1, All).toPrettyForm === "Span[1, All]"
+            Eval('f, 'x, 'y, 'z).toPrettyForm === "f[x, y, z]"
         }
 
         "Produce readable output from toString" in {
@@ -80,6 +81,7 @@ class MathematicaParserSuite extends Specification {
             Plus('x, 'y, 'z).toString === "Plus(Sym(x), Sym(y), Sym(z))"
             Plus(1, Power(2, 3)).toString === "Plus(Num(1), Power(Num(2), Num(3)))"
             Span(1, All).toString === "Span(Num(1), All)"
+            Eval('f, 'x, 'y, 'z).toString === "Eval(Sym(f), Sym(x), Sym(y), Sym(z))"
         }
     }
 
@@ -395,8 +397,8 @@ class MathematicaParserSuite extends Specification {
             "x[[0]] = 127"              ~== Set(Part('x, 0), 127)
             "{x[[0]], y[[0]]} = {a, b}" ~== Set(List(Part('x, 0), Part('y, 0)), List('a, 'b))
 
-            "x[[y[[f[t]]]]]"            ~== Part('x, Part('y, Eval("f", 't)))
-            "-x[[-y[[f[t]]]]]"          ~== Times(-1, Part('x, Times(-1, Part('y, Eval("f", 't)))))
+            "x[[y[[f[t]]]]]"            ~== Part('x, Part('y, Eval('f, 't)))
+            "-x[[-y[[f[t]]]]]"          ~== Times(-1, Part('x, Times(-1, Part('y, Eval('f, 't)))))
         }
 
         "Parse span operators: a ;; b, a ;; b ;; c" in {

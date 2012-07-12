@@ -24,31 +24,39 @@ case class Str(value: String) extends Expr {
 }
 
 sealed trait EvalLike extends Expr {
-    val head: String
+    val head: Expr
     val args: Seq[Expr]
 
     def toPrettyForm = {
+        val head = this.head.toPrettyForm
         val args = this.args.map(_.toPrettyForm).mkString(", ")
         s"$head[$args]"
     }
+}
+
+case class Eval(head: Expr, args: Expr*) extends EvalLike {
+    override def toString: String = {
+        val name = productPrefix
+        val args = this.args.map(_.toString).mkString(", ")
+        s"$name($head, $args)"
+    }
+}
+
+sealed trait Builtin extends EvalLike with scala.Product {
+    override val head: Sym = Sym(productPrefix)
 
     override def toString: String = {
+        val head = this.head.name
         val args = this.args.map(_.toString).mkString(", ")
         s"$head($args)"
     }
 }
 
-case class Eval(head: String, args: Expr*) extends EvalLike
-
-sealed trait Builtin extends EvalLike with scala.Product {
-    val head = productPrefix
-}
-
 sealed trait Singleton extends Builtin {
     final val args: Seq[Expr] = Nil
 
-    override def toPrettyForm = head
-    override def toString = head
+    override def toPrettyForm = head.name
+    override def toString = head.name
 }
 
 object Builtins {
@@ -190,10 +198,10 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         case Regex.Groups(index) => Builtins.Slot(index.toInt)
     }
 
-    lazy val apply: PackratParser[Expr] = ident ~ ("[" ~> repsep(expr, ",") <~ "]") ^^ {
+    lazy val eval: PackratParser[Expr] = ident ~ ("[" ~> repsep(expr, ",") <~ "]") ^^ {
         // TODO: this has to be automated (e.g. with reflection)
         case "Exp" ~ args => Builtins.Exp(args: _*)
-        case head  ~ args => Eval(head, args: _*)
+        case head  ~ args => Eval(Sym(head), args: _*)
     }
 
     lazy val list: PackratParser[Expr] = "{" ~ repsep(expr, ",") ~ "}" ^^ {
@@ -389,7 +397,7 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
     lazy val tightest: PackratParser[Expr] = group | value
 
     lazy val group: PackratParser[Expr] = "(" ~> expr <~ ")"
-    lazy val value: PackratParser[Expr] = apply | list | slot | out | pattern | number | str
+    lazy val value: PackratParser[Expr] = eval | list | slot | out | pattern | number | str
 
     lazy val mathematica: PackratParser[Expr] = expr
 }
