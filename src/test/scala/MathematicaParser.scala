@@ -125,13 +125,24 @@ class MathematicaParserSuite extends Specification {
             "%17!"       ~== Factorial(Out(17))
         }
 
-        "Parse slots: #, #127" in {
-            "#"          ~== Slot(1)
-            "#127"       ~== Slot(127)
-            "a #"        ~== Times('a, Slot(1))
-            "a #127"     ~== Times('a, Slot(127))
-            "a # + 1"    ~== Plus(Times('a, Slot(1)), 1)
-            "a #127 + 1" ~== Plus(Times('a, Slot(127)), 1)
+        "Parse slots: #, #127, ##, ##127" in {
+            "#"           ~== Slot(1)
+            "#127"        ~== Slot(127)
+            "a #"         ~== Times('a, Slot(1))
+            "a #127"      ~== Times('a, Slot(127))
+            "a # + 1"     ~== Plus(Times('a, Slot(1)), 1)
+            "a #127 + 1"  ~== Plus(Times('a, Slot(127)), 1)
+
+            "##"          ~== SlotSequence(1)
+            "##127"       ~== SlotSequence(127)
+            "a ##"        ~== Times('a, SlotSequence(1))
+            "a ##127"     ~== Times('a, SlotSequence(127))
+            "a ## + 1"    ~== Plus(Times('a, SlotSequence(1)), 1)
+            "a ##127 + 1" ~== Plus(Times('a, SlotSequence(127)), 1)
+
+            "###"         ~== Times(SlotSequence(1), Slot(1))
+            "## #"        ~== Times(SlotSequence(1), Slot(1))
+            "# ##"        ~== Times(Slot(1), SlotSequence(1))
         }
 
         "Parse mixed arithmetics" in {

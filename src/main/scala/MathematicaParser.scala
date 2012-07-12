@@ -95,6 +95,7 @@ object Builtins {
     case class Factorial2(args: Expr*) extends Builtin
     case class Out(args: Expr*) extends Builtin
     case class Slot(args: Expr*) extends Builtin
+    case class SlotSequence(args: Expr*) extends Builtin
     case class Pattern(args: Expr*) extends Builtin
     case class Blank(args: Expr*) extends Builtin
     case class PatternTest(args: Expr*) extends Builtin
@@ -201,9 +202,11 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         case value => Builtins.Out(Num(s"-${value.length}"))
     }
 
-    lazy val slot: PackratParser[Expr] = regexMatch("#(\\d*)".r) ^^ {
-        case Regex.Groups("")    => Builtins.Slot(1)
-        case Regex.Groups(index) => Builtins.Slot(index.toInt)
+    lazy val slot: PackratParser[Expr] = regexMatch("(#{1,2})(\\d*)".r) ^^ {
+        case Regex.Groups("#",  "")    => Builtins.Slot(1)
+        case Regex.Groups("#",  index) => Builtins.Slot(index.toInt)
+        case Regex.Groups("##", "")    => Builtins.SlotSequence(1)
+        case Regex.Groups("##", index) => Builtins.SlotSequence(index.toInt)
     }
 
     lazy val list: PackratParser[Expr] = "{" ~ repsep(expr, ",") ~ "}" ^^ {
