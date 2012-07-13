@@ -2,6 +2,8 @@ package org.sympy.parsing.mathematica
 
 import java.io.File
 import scala.io.Source
+
+import scala.annotation.tailrec
 import scala.util.matching.Regex
 
 import scala.util.parsing.combinator._
@@ -75,6 +77,7 @@ object Builtins {
     case class And(args: Expr*) extends Builtin
     case class Not(args: Expr*) extends Builtin
     case class SameQ(args: Expr*) extends Builtin
+    case class UnsameQ(args: Expr*) extends Builtin
     case class Equal(args: Expr*) extends Builtin
     case class Unequal(args: Expr*) extends Builtin
     case class LessEqual(args: Expr*) extends Builtin
@@ -245,7 +248,7 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         or        :: // infix, flat  :  ||
         and       :: // infix, flat  :  &&
         not       :: // prefix       :  !
-        same      :: // infix, flat  :  ===
+        same      :: // infix, flat  :  ===, =!=
         cmp       :: // infix, flat  :  == != <= < >= >
         span      :: // infix, none  :  ;;
         add       :: // infix, flat  :  + -
@@ -323,8 +326,27 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
     }
     lazy val notExpr: ExprParser = rulesFrom(same)
 
-    lazy val same: ExprParser = log(sameExpr ~ rep1("===" ~> (not | sameExpr)))("same") ^^ {
-        case head ~ tail => Builtins.SameQ(head :: tail: _*)
+    // XXX: special case of `not' on rhs
+    lazy val same: ExprParser = log(sameExpr ~ rep1(("===" | "=!=") ~ (not | sameExpr)))("same") ^^ {
+        case head ~ tail =>
+            case class OpExpr(op: String, expr: Expr)
+
+            @tailrec def buildAST(init: Expr, rest: List[OpExpr]): Expr = {
+                rest match {
+                    case Nil =>
+                        init
+                    case OpExpr(op, _) :: _ =>
+                        val (head, tail) = rest.span(_.op == op)
+                        val args = init :: head.map(_.expr)
+                        val result = (op match {
+                            case "===" => Builtins.SameQ
+                            case "=!=" => Builtins.UnsameQ
+                        })(args: _*)
+                        buildAST(result, tail)
+                }
+            }
+
+            buildAST(head, tail.map { case op ~ expr => OpExpr(op, expr) })
     }
     lazy val sameExpr: ExprParser = rulesFrom(cmp)
 

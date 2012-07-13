@@ -313,7 +313,7 @@ class MathematicaParserSuite extends Specification {
             "x!! !!!^a"  ~== Power(Factorial(Factorial2(Factorial2('x))), 'a)
         }
 
-        "Parse equivalence operator: a === b" in {
+        "Parse equivalence operators: a === b, a =!= b" in {
             "x === y"                     ~== SameQ('x, 'y)
             "!x === y"                    ~== Not(SameQ('x, 'y))
             "x === !y"                    ~== SameQ('x, Not('y))
@@ -331,6 +331,16 @@ class MathematicaParserSuite extends Specification {
             "!x === y || !z === t"        ~== Or(Not(SameQ('x, 'y)), Not(SameQ('z, 't)))
             "!x === y && !z === t"        ~== And(Not(SameQ('x, 'y)), Not(SameQ('z, 't)))
             "x -> y === z -> t"           ~== Rule('x, Rule(SameQ('y, 'z), 't))
+
+            "x =!= y"                     ~== UnsameQ('x, 'y)
+            "!x =!= y"                    ~== Not(UnsameQ('x, 'y))
+            "x =!= !y"                    ~== UnsameQ('x, Not('y))
+            "x =!= y =!= z"               ~== UnsameQ('x, 'y, 'z)
+            "!x =!= y =!= z"              ~== Not(UnsameQ('x, 'y, 'z))
+            "x =!= !y =!= z"              ~== UnsameQ('x, Not(UnsameQ('y, 'z)))
+            "!x =!= y =!= z =!= t"        ~== Not(UnsameQ('x, 'y, 'z, 't))
+
+            "a === b === c =!= d =!= e =!= f === g" ~== SameQ(UnsameQ(SameQ('a, 'b, 'c), 'd, 'e, 'f), 'g)
         }
 
         "Parse logical operators: x || y, x && y" in {
