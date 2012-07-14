@@ -101,6 +101,8 @@ object Builtins {
     case class SlotSequence(args: Expr*) extends Builtin
     case class Pattern(args: Expr*) extends Builtin
     case class Blank(args: Expr*) extends Builtin
+    case class BlankSequence(args: Expr*) extends Builtin
+    case class BlankNullSequence(args: Expr*) extends Builtin
     case class PatternTest(args: Expr*) extends Builtin
     case class Condition(args: Expr*) extends Builtin
     case class Increment(args: Expr*) extends Builtin
@@ -184,20 +186,26 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
     lazy val pattern: ExprParser =
         log(symbolBlankWithHead | symbolBlank | symbol | blankWithHead | blank)("pattern")
 
-    lazy val blank: ExprParser = "_" ^^ {
-        case _ => Builtins.Blank()
+    protected def buildBlank(underscores: String)(args: Expr*) = underscores.length match {
+        case 1 => Builtins.Blank(args: _*)
+        case 2 => Builtins.BlankSequence(args: _*)
+        case 3 => Builtins.BlankNullSequence(args: _*)
     }
-    lazy val blankWithHead: ExprParser = regexMatch(s"_($name)".r) ^^ {
-        case Regex.Groups(head) => Builtins.Blank(Sym(head))
+
+    lazy val blank: ExprParser = regexMatch("(_{1,3})".r) ^^ {
+        case Regex.Groups(underscores) => buildBlank(underscores)()
+    }
+    lazy val blankWithHead: ExprParser = regexMatch(s"(_{1,3})($name)".r) ^^ {
+        case Regex.Groups(underscores, head) => buildBlank(underscores)(Sym(head))
     }
     lazy val symbol: ExprParser = regexMatch(s"($name)".r) ^^ {
         case Regex.Groups(name) => Sym(name)
     }
-    lazy val symbolBlank: ExprParser = regexMatch(s"($name)_".r) ^^ {
-        case Regex.Groups(name) => Builtins.Pattern(Sym(name), Builtins.Blank())
+    lazy val symbolBlank: ExprParser = regexMatch(s"($name)(_{1,3})".r) ^^ {
+        case Regex.Groups(name, underscores) => Builtins.Pattern(Sym(name), buildBlank(underscores)())
     }
-    lazy val symbolBlankWithHead: ExprParser = regexMatch(s"($name)_($name)".r) ^^ {
-        case Regex.Groups(name, head) => Builtins.Pattern(Sym(name), Builtins.Blank(Sym(head)))
+    lazy val symbolBlankWithHead: ExprParser = regexMatch(s"($name)(_{1,3})($name)".r) ^^ {
+        case Regex.Groups(name, underscores, head) => Builtins.Pattern(Sym(name), buildBlank(underscores)(Sym(head)))
     }
 
     lazy val number: PackratParser[Num] = log("""(\d+\.\d*|\d*\.\d+|\d+)([eE][+-]?\d+)?""".r)("number") ^^ {
