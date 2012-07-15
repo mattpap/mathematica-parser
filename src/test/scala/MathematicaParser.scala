@@ -248,6 +248,16 @@ class MathematicaParserSuite extends Specification {
             "-x -> y + z -> 3*t"     ~== Rule(Times(-1, 'x), Rule(Plus('y, 'z), Times(3, 't)))
             "x -> y || z -> t"       ~== Rule('x, Rule(Or('y, 'z), 't))
             "(x -> y) || (z -> t)"   ~== Or(Rule('x, 'y), Rule('z, 't))
+
+            "x :> y"                 ~== DelayedRule('x, 'y)
+            "x :> y :> z"            ~== DelayedRule('x, DelayedRule('y, 'z))
+            "(x :> y) :> z"          ~== DelayedRule(DelayedRule('x, 'y), 'z)
+            "x :> (y :> z)"          ~== DelayedRule('x, DelayedRule('y, 'z))
+            "x :> y :> z :> t"       ~== DelayedRule('x, DelayedRule('y, DelayedRule('z, 't)))
+            "x :> y || z :> t"       ~== DelayedRule('x, DelayedRule(Or('y, 'z), 't))
+            "(x :> y) || (z :> t)"   ~== Or(DelayedRule('x, 'y), DelayedRule('z, 't))
+
+            "a -> b -> c :> d :> e -> f :> g" ~== Rule('a, Rule('b, DelayedRule('c, DelayedRule('d, Rule('e, DelayedRule('f, 'g))))))
         }
 
         "Parse replace all: x /. y" in {

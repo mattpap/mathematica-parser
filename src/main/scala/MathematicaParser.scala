@@ -73,6 +73,7 @@ object Builtins {
     case class DivideBy(args: Expr*) extends Builtin
     case class ReplaceAll(args: Expr*) extends Builtin
     case class Rule(args: Expr*) extends Builtin
+    case class DelayedRule(args: Expr*) extends Builtin
     case class Or(args: Expr*) extends Builtin
     case class And(args: Expr*) extends Builtin
     case class Not(args: Expr*) extends Builtin
@@ -251,7 +252,7 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         assign    :: // infix, right :  = := += -= *= /=
         func      :: // postfix      :  &
         replace   :: // infix, left  :  /.
-        rule      :: // infix, right :  ->
+        rule      :: // infix, right :  -> :>
         cond      :: // infix, left  :  /;
         or        :: // infix, flat  :  ||
         and       :: // infix, flat  :  &&
@@ -309,8 +310,9 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
     }
     lazy val replaceExpr: ExprParser = rulesFrom(rule)
 
-    lazy val rule: ExprParser = log(ruleExpr ~ "->" ~ (rule | ruleExpr))("rule") ^^ {
-        case lhs ~ _ ~ rhs => Builtins.Rule(lhs, rhs)
+    lazy val rule: ExprParser = log(ruleExpr ~ ("->" | ":>") ~ (rule | ruleExpr))("rule") ^^ {
+        case lhs ~ "->" ~ rhs => Builtins.Rule(lhs, rhs)
+        case lhs ~ ":>" ~ rhs => Builtins.DelayedRule(lhs, rhs)
     }
     lazy val ruleExpr: ExprParser = rulesFrom(cond)
 
