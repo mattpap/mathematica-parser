@@ -104,27 +104,30 @@ class MathematicaParserSuite extends Specification {
             "-\"abc\"" ~== Times(-1, Str("abc"))
         }
 
-        "Parse simple patterns" in {
-            "_"           ~== Blank()
-            "_Integer"    ~== Blank('Integer)
-            "x_"          ~== Pattern('x, Blank())
-            "x_Integer"   ~== Pattern('x, Blank('Integer))
-            "xyz_"        ~== Pattern('xyz, Blank())
-            "xyz_Integer" ~== Pattern('xyz, Blank('Integer))
+        "Parse symbols and patterns" in {
+            "xyz"               ~== Sym("xyz")
+            "$MachinePrecision" ~== Sym("$MachinePrecision")
 
-            "__"           ~== BlankSequence()
-            "__Integer"    ~== BlankSequence('Integer)
-            "x__"          ~== Pattern('x, BlankSequence())
-            "x__Integer"   ~== Pattern('x, BlankSequence('Integer))
-            "xyz__"        ~== Pattern('xyz, BlankSequence())
-            "xyz__Integer" ~== Pattern('xyz, BlankSequence('Integer))
+            "_"                 ~== Blank()
+            "_Integer"          ~== Blank('Integer)
+            "x_"                ~== Pattern('x, Blank())
+            "x_Integer"         ~== Pattern('x, Blank('Integer))
+            "xyz_"              ~== Pattern('xyz, Blank())
+            "xyz_Integer"       ~== Pattern('xyz, Blank('Integer))
 
-            "___"           ~== BlankNullSequence()
-            "___Integer"    ~== BlankNullSequence('Integer)
-            "x___"          ~== Pattern('x, BlankNullSequence())
-            "x___Integer"   ~== Pattern('x, BlankNullSequence('Integer))
-            "xyz___"        ~== Pattern('xyz, BlankNullSequence())
-            "xyz___Integer" ~== Pattern('xyz, BlankNullSequence('Integer))
+            "__"                ~== BlankSequence()
+            "__Integer"         ~== BlankSequence('Integer)
+            "x__"               ~== Pattern('x, BlankSequence())
+            "x__Integer"        ~== Pattern('x, BlankSequence('Integer))
+            "xyz__"             ~== Pattern('xyz, BlankSequence())
+            "xyz__Integer"      ~== Pattern('xyz, BlankSequence('Integer))
+
+            "___"               ~== BlankNullSequence()
+            "___Integer"        ~== BlankNullSequence('Integer)
+            "x___"              ~== Pattern('x, BlankNullSequence())
+            "x___Integer"       ~== Pattern('x, BlankNullSequence('Integer))
+            "xyz___"            ~== Pattern('xyz, BlankNullSequence())
+            "xyz___Integer"     ~== Pattern('xyz, BlankNullSequence('Integer))
         }
 
         "Parse output references: %, %%, %%%, %n" in {

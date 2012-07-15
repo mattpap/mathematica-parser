@@ -180,7 +180,7 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
 
     import Implicits._
 
-    protected val name = "[a-zA-Z][a-zA-Z0-9]*"
+    protected val name = "[a-zA-Z$][a-zA-Z0-9$]*"
 
     lazy val ident: PackratParser[String] = regex(name.r)
 
