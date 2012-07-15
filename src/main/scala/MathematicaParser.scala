@@ -113,6 +113,8 @@ object Builtins {
     case class Derivative(args: Expr*) extends Builtin
     case class Dot(args: Expr*) extends Builtin
     case class Function(args: Expr*) extends Builtin
+    case class Repeated(args: Expr*) extends Builtin
+    case class RepeatedNull(args: Expr*) extends Builtin
 }
 
 object Singletons {
@@ -254,6 +256,7 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         replace   :: // infix, left  :  /.
         rule      :: // infix, right :  -> :>
         cond      :: // infix, left  :  /;
+        repeated  :: // postfix      :  .. ...
         or        :: // infix, flat  :  ||
         and       :: // infix, flat  :  &&
         not       :: // prefix       :  !
@@ -319,7 +322,13 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
     lazy val cond: ExprParser = log((cond | condExpr) ~ "/;" ~ condExpr)("cond") ^^ {
         case lhs ~ _ ~ rhs => Builtins.Condition(lhs, rhs)
     }
-    lazy val condExpr: ExprParser = rulesFrom(or)
+    lazy val condExpr: ExprParser = rulesFrom(repeated)
+
+    lazy val repeated: ExprParser = log((repeated | repeatedExpr) ~ ("..." | ".."))("repeated") ^^ {
+        case expr ~ ".."  => Builtins.Repeated(expr)
+        case expr ~ "..." => Builtins.RepeatedNull(expr)
+    }
+    lazy val repeatedExpr: ExprParser = rulesFrom(or)
 
     lazy val or: ExprParser = log(orExpr ~ rep1("||" ~> orExpr))("or") ^^ {
         case head ~ tail => Builtins.Or(head :: tail: _*)

@@ -562,6 +562,19 @@ class MathematicaParserSuite extends Specification {
             // "a + b & + 1"           ~== Plus(Function(Plus('a, 'b)), 1)
         }
 
+        "Parse repeated patterns: a.., b..." in {
+            "a.."                   ~== Repeated('a)
+            "a..."                  ~== RepeatedNull('a)
+            "a....."                ~== Repeated(RepeatedNull('a))
+            "a.. ..."               ~== RepeatedNull(Repeated('a))
+            "a... .."               ~== Repeated(RepeatedNull('a))
+
+            "a || b.."              ~== Repeated(Or('a, 'b))
+            "a /; b.."              ~== Condition('a, Repeated('b))
+            "a || b..."             ~== RepeatedNull(Or('a, 'b))
+            "a /; b..."             ~== Condition('a, RepeatedNull('b))
+        }
+
         "Deal with errors" in {
             parse("1 + ") must beLike {
                 case ParseError(msg, file, pos) =>
