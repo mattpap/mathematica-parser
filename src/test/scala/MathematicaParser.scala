@@ -598,6 +598,24 @@ class MathematicaParserSuite extends Specification {
             "a /; b..."             ~== Condition('a, RepeatedNull('b))
         }
 
+        "Parse real life examples" in {
+            "DSolve[{y'[x] + y[x] == a Sin[x], y[0] == 0}, y, x]; FullSimplify[y''[x] + y[x]^2 /. %]" ~==
+                CompoundExpression(
+                    Eval('DSolve,
+                        List(
+                            Equal(
+                                Plus(Derivative(1)('y)('x), Eval('y, 'x)),
+                                Times('a, Eval('Sin, 'x))),
+                            Equal(Eval('y, 0), 0)),
+                        'y, 'x),
+                    Eval('FullSimplify,
+                        ReplaceAll(
+                            Plus(
+                                Derivative(2)('y)('x),
+                                Power(Eval('y, 'x), 2)),
+                            Out())))
+        }
+
         "Deal with errors" in {
             parse("1 + ") must beLike {
                 case ParseError(msg, file, pos) =>
