@@ -12,7 +12,7 @@ import scala.util.parsing.input.{Positional,Position}
 sealed trait Expr {
     def toPrettyForm: String
 
-    def apply(expr: Expr): Eval = Eval(this, expr)
+    def apply(exprs: Expr*): Eval = Eval(this, exprs: _*)
 }
 
 case class Sym(name: String) extends Expr {
@@ -268,17 +268,12 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         dot       :: // infix, flat  :  .
         neg       :: // prefix       :  -
         exp       :: // infix, right :  ^
-        deriv     :: // postifx      :  '
-        eval      :: // postfix      :  []
-        dec       :: // postfix      :  --
-        inc       :: // postfix      :  ++
-        factorial :: // postfix      :  ! !!
-        part      :: // postfix      :  [[]]
+        postfix   :: // postfix      :  ' [[]] [] ! !! -- ++
         test      :: // infix, none  :  ?
         tightest  ::
         Nil
 
-    lazy val expr: ExprParser = rules()
+    lazy val expr: ExprParser = log(rules())("precedence")
 
     lazy val compound: ExprParser = log(complexCompound | simpleCompound)("compound")
     lazy val semicolon: PackratParser[String] = notFollowedBy(";", ';')
@@ -450,34 +445,50 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
     lazy val exp: ExprParser = log(expLhsExpr ~ "^" ~ (exp | expRhsExpr))("exp") ^^ {
         case lhs ~ _ ~ rhs => Builtins.Power(lhs, rhs)
     }
-    lazy val expLhsExpr: ExprParser = rulesFrom(deriv)
+    lazy val expLhsExpr: ExprParser = rulesFrom(postfix)
     lazy val expRhsExpr: ExprParser = neg | expLhsExpr
 
-    lazy val deriv: ExprParser = log((deriv | derivExpr) ~ "'+".r)("deriv") ^^ {
-        case expr ~ ticks => Eval(Builtins.Derivative(ticks.length), expr)
-    }
-    lazy val derivExpr: ExprParser = rulesFrom(eval)
+    sealed trait PostfixOp
+    case class DerivOp(n: Int) extends PostfixOp
+    case class PartOp(args: Expr*) extends PostfixOp
+    case class EvalOp(args: Expr*) extends PostfixOp
+    case object FactorialOp extends PostfixOp
+    case object Factorial2Op extends PostfixOp
+    case object DecrementOp extends PostfixOp
+    case object IncrementOp extends PostfixOp
 
-    lazy val eval: ExprParser = log((eval | evalExpr) ~ (notFollowedBy("[", '[') ~> repsep(expr, ",") <~ "]"))("eval") ^^ {
-        // TODO: this has to be automated (e.g. with reflection)
-        case Sym("Exp") ~ args => Builtins.Exp(args: _*)
-        case head       ~ args => Eval(head, args: _*)
+    lazy val derivOp: PackratParser[PostfixOp] = "'+".r ^^ {
+        case ticks => DerivOp(ticks.length)
     }
-    lazy val evalExpr: ExprParser = rulesFrom(dec)
-
-    lazy val inc: ExprParser = failure("inc") // log(failure("inc"))("inc")
-    lazy val dec: ExprParser = failure("dec") // log(failure("dec"))("inc")
-
-    lazy val factorial: ExprParser = log((factorial | factorialExpr) ~ ("!!" | notFollowedBy("!", '=')))("factorial") ^^ {
-        case expr ~ "!"  => Builtins.Factorial(expr)
-        case expr ~ "!!" => Builtins.Factorial2(expr)
+    lazy val partOp: PackratParser[PostfixOp] = "[[" ~> repsep(expr, ",") <~ "]]" ^^ {
+        case exprs => PartOp(exprs: _*)
     }
-    lazy val factorialExpr: ExprParser = rulesFrom(part)
-
-    lazy val part: ExprParser = log((part | partExpr) ~ "[[" ~ repsep(expr, ",") ~ "]]")("part") ^^ {
-        case expr ~ _ ~ indices ~ _ => Builtins.Part(expr :: indices: _*)
+    lazy val evalOp: PackratParser[PostfixOp] = "[" ~> repsep(expr, ",") <~ "]" ^^ {
+        case exprs => EvalOp(exprs: _*)
     }
-    lazy val partExpr: ExprParser = rulesFrom(test)
+    lazy val factorialOp: PackratParser[PostfixOp] = ("!!" | notFollowedBy("!", '=')) ^^ {
+        case "!" => FactorialOp
+        case "!!" => Factorial2Op
+    }
+    lazy val postIncDecOp: PackratParser[PostfixOp] = ("--" | "++") ^^ {
+        case "--" => DecrementOp
+        case "++" => IncrementOp
+    }
+
+    lazy val postfix: ExprParser = log(postfixExpr ~ rep1(derivOp | partOp | evalOp | factorialOp | postIncDecOp))("postfix") ^^ {
+        case expr ~ ops => ops.foldLeft(expr) {
+            case (expr, DerivOp(n)) => Eval(Builtins.Derivative(n), expr)
+            case (expr, PartOp(indices @ _*)) => Builtins.Part(expr +: indices: _*)
+            // TODO: this has to be automated (e.g. with reflection)
+            case (Sym("Exp"), EvalOp(args @ _*)) => Builtins.Exp(args: _*)
+            case (head, EvalOp(args @ _*)) => Eval(head, args: _*)
+            case (expr, FactorialOp) => Builtins.Factorial(expr)
+            case (expr, Factorial2Op) => Builtins.Factorial2(expr)
+            case (expr, DecrementOp) => Builtins.Decrement(expr)
+            case (expr, IncrementOp) => Builtins.Increment(expr)
+        }
+    }
+    lazy val postfixExpr: ExprParser = rulesFrom(test)
 
     lazy val test: ExprParser = log(testExpr ~ "?" ~ testExpr)("test") ^^ {
         case lhs ~ _ ~ rhs => Builtins.PatternTest(lhs, rhs)

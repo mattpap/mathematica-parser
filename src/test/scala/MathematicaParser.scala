@@ -518,7 +518,7 @@ class MathematicaParserSuite extends Specification {
             "f[x][x, y][x, y, z]"   ~== Eval(Eval(Eval('f, 'x), 'x, 'y), 'x, 'y, 'z)
             "f[g[x]]"               ~== Eval('f, Eval('g, 'x))
             "f[g[h[x, y, z][t]]]"   ~== Eval('f, Eval('g, Eval(Eval('h, 'x, 'y, 'z), 't)))
-            // "f[x][y, z][[0]]"       ~== Part(Eval(Eval('f, 'x), 'y, 'z), 0)
+            "f[x][y, z][[0]]"       ~== Part(Eval(Eval('f, 'x), 'y, 'z), 0)
 
             "f + g[x]"              ~== Plus('f, Eval('g, 'x))
             "f g[x]"                ~== Times('f, Eval('g, 'x))
@@ -536,7 +536,10 @@ class MathematicaParserSuite extends Specification {
             "f'''"                  ~== Derivative(3)('f)
             "f''''"                 ~== Derivative(4)('f)
             "f''' ' ''''"           ~== Derivative(4)(Derivative(1)(Derivative(3)('f)))
-            // "f'[t]"                 ~== Derivative(1)('f)('t)
+            "f'[t]"                 ~== Derivative(1)('f)('t)
+            "f'[t]''"               ~== Derivative(2)(Derivative(1)('f)('t))
+            "f'[t]''[x,y]"          ~== Derivative(2)(Derivative(1)('f)('t))('x, 'y)
+            "f'[t]''[x,y]'''"       ~== Derivative(3)(Derivative(2)(Derivative(1)('f)('t))('x, 'y))
             "f + g'"                ~== Plus('f, Derivative(1)('g))
             "f g'"                  ~== Times('f, Derivative(1)('g))
             "f^g'"                  ~== Power('f, Derivative(1)('g))
@@ -545,6 +548,26 @@ class MathematicaParserSuite extends Specification {
             "f[[0]]'"               ~== Derivative(1)(Part('f, 0))
             "f?g'"                  ~== Derivative(1)(PatternTest('f, 'g))
             "(f + g)'"              ~== Derivative(1)(Plus('f, 'g))
+        }
+
+        "Parse increment and decrement operators: x++, y--" in {
+            "x++"                   ~== Increment('x)
+            "x++++"                 ~== Increment(Increment('x))
+            "x++++++"               ~== Increment(Increment(Increment('x)))
+            "x--"                   ~== Decrement('x)
+            "x----"                 ~== Decrement(Decrement('x))
+            "x------"               ~== Decrement(Decrement(Decrement('x)))
+            "x++--"                 ~== Decrement(Increment('x))
+            "x--++"                 ~== Increment(Decrement('x))
+
+            "x!++"                  ~== Increment(Factorial('x))
+            "x++!"                  ~== Factorial(Increment('x))
+            "x[0]++"                ~== Increment(Eval('x, 0))
+            "x++[0]"                ~== Eval(Increment('x), 0)
+            "x[[1]]++"              ~== Increment(Part('x, 1))
+            "x++[[1]]"              ~== Part(Increment('x), 1)
+            "x'++"                  ~== Increment(Derivative(1)('x))
+            "x++'"                  ~== Derivative(1)(Increment('x))
         }
 
         "Parse dot product: a . b" in {
