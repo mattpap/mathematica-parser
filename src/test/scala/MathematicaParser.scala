@@ -594,6 +594,10 @@ class MathematicaParserSuite extends Specification {
             "a /; b..."             ~== 'Condition('a, 'RepeatedNull('b))
         }
 
+        "Parse map operator: Function[x, x^2] /@ {1, 2, 3, 4}" in {
+            "Function[x, x^2] /@ {1, 2, 3, 4}" ~== 'Map('Function('x, 'Power('x, 2)), 'List(1, 2, 3, 4))
+        }
+
         "Parse real life examples" in {
             "DSolve[{y'[x] + y[x] == a Sin[x], y[0] == 0}, y, x]; FullSimplify[y''[x] + y[x]^2 /. %]" ~==
                 'CompoundExpression(
