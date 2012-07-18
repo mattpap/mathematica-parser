@@ -98,7 +98,7 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         dot       :: // infix, flat  :  .
         neg       :: // prefix       :  -
         exp       :: // infix, right :  ^
-        map       :: // infix, right :  /@
+        map       :: // infix, right :  @@ /@
         postfix   :: // postfix      :  ' [[]] [] ! !! -- ++
         test      :: // infix, none  :  ?
         tightest  ::
@@ -279,8 +279,9 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
     lazy val expLhsExpr: ExprParser = rulesFrom(map)
     lazy val expRhsExpr: ExprParser = neg | expLhsExpr
 
-    lazy val map: ExprParser = log(mapExpr ~ "/@" ~ (map | mapExpr))("map") ^^ {
-        case lhs ~ _ ~ rhs => 'Map(lhs, rhs)
+    lazy val map: ExprParser = log(mapExpr ~ ("@@" | "/@") ~ (map | mapExpr))("map") ^^ {
+        case lhs ~ "@@" ~ rhs => 'Apply(lhs, rhs)
+        case lhs ~ "/@" ~ rhs => 'Map(lhs, rhs)
     }
     lazy val mapExpr: ExprParser = rulesFrom(postfix)
 

@@ -595,7 +595,18 @@ class MathematicaParserSuite extends Specification {
         }
 
         "Parse map operator: Function[x, x^2] /@ {1, 2, 3, 4}" in {
+            "f /@ g"                ~== 'Map('f, 'g)
+            "f /@ g /@ h"           ~== 'Map('f, 'Map('g, 'h))
+
             "Function[x, x^2] /@ {1, 2, 3, 4}" ~== 'Map('Function('x, 'Power('x, 2)), 'List(1, 2, 3, 4))
+        }
+
+        "Parse application operator: f @@ {1, 2, 3, 4}" in {
+            "f @@ g"                ~== 'Apply('f, 'g)
+            "f @@ g @@ h"           ~== 'Apply('f, 'Apply('g, 'h))
+
+            "f @@ g /@ h @@ t"      ~== 'Apply('f, 'Map('g, 'Apply('h, 't)))
+            "f @@ {1, 2, 3, 4}"     ~== 'Apply('f, 'List(1, 2, 3, 4))
         }
 
         "Parse real life examples" in {
