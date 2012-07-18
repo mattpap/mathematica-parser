@@ -441,8 +441,8 @@ class MathematicaParserSuite extends Specification {
             "x[[0]] = 127"              ~== 'Set('Part('x, 0), 127)
             "{x[[0]], y[[0]]} = {a, b}" ~== 'Set('List('Part('x, 0), 'Part('y, 0)), 'List('a, 'b))
 
-            "x[[y[[f[t]]]]]"            ~== 'Part('x, 'Part('y, Eval('f, 't)))
-            "-x[[-y[[f[t]]]]]"          ~== 'Times(-1, 'Part('x, 'Times(-1, 'Part('y, Eval('f, 't)))))
+            "x[[y[[f[t]]]]]"            ~== 'Part('x, 'Part('y, 'f('t)))
+            "-x[[-y[[f[t]]]]]"          ~== 'Times(-1, 'Part('x, 'Times(-1, 'Part('y, 'f('t)))))
         }
 
         "Parse span operators: a ;; b, a ;; b ;; c" in {
@@ -505,25 +505,25 @@ class MathematicaParserSuite extends Specification {
         }
 
         "Parse functional evaluation: f[x], (f + g)[x][y][z]" in {
-            "f[x]"                  ~== Eval('f, 'x)
-            "f[x, y]"               ~== Eval('f, 'x, 'y)
-            "f[x, y, z]"            ~== Eval('f, 'x, 'y, 'z)
-            "f[x][y]"               ~== Eval(Eval('f, 'x), 'y)
-            "f[x][y][z]"            ~== Eval(Eval(Eval('f, 'x), 'y), 'z)
-            "f[x][x, y]"            ~== Eval(Eval('f, 'x), 'x, 'y)
-            "f[x][x, y][x, y, z]"   ~== Eval(Eval(Eval('f, 'x), 'x, 'y), 'x, 'y, 'z)
-            "f[g[x]]"               ~== Eval('f, Eval('g, 'x))
-            "f[g[h[x, y, z][t]]]"   ~== Eval('f, Eval('g, Eval(Eval('h, 'x, 'y, 'z), 't)))
-            "f[x][y, z][[0]]"       ~== 'Part(Eval(Eval('f, 'x), 'y, 'z), 0)
+            "f[x]"                  ~== 'f('x)
+            "f[x, y]"               ~== 'f('x, 'y)
+            "f[x, y, z]"            ~== 'f('x, 'y, 'z)
+            "f[x][y]"               ~== 'f('x)('y)
+            "f[x][y][z]"            ~== 'f('x)('y)('z)
+            "f[x][x, y]"            ~== 'f('x)('x, 'y)
+            "f[x][x, y][x, y, z]"   ~== 'f('x)('x, 'y)('x, 'y, 'z)
+            "f[g[x]]"               ~== 'f('g('x))
+            "f[g[h[x, y, z][t]]]"   ~== 'f('g('h('x, 'y, 'z)('t)))
+            "f[x][y, z][[0]]"       ~== 'Part('f('x)('y, 'z), 0)
 
-            "f + g[x]"              ~== 'Plus('f, Eval('g, 'x))
-            "f g[x]"                ~== 'Times('f, Eval('g, 'x))
-            "f^g[x]"                ~== 'Power('f, Eval('g, 'x))
-            "f![x]"                 ~== Eval('Factorial('f), 'x)
-            "f[[0]][x]"             ~== Eval('Part('f, 0), 'x)
-            "f ? g[x]"              ~== Eval('PatternTest('f, 'g), 'x)
-            "(f + g)[x]"            ~== Eval('Plus('f, 'g), 'x)
-            "(f + g)[x]^h[a, b]"    ~== 'Power(Eval('Plus('f, 'g), 'x), Eval('h, 'a, 'b))
+            "f + g[x]"              ~== 'Plus('f, 'g('x))
+            "f g[x]"                ~== 'Times('f, 'g('x))
+            "f^g[x]"                ~== 'Power('f, 'g('x))
+            "f![x]"                 ~== 'Factorial('f)('x)
+            "f[[0]][x]"             ~== 'Part('f, 0)('x)
+            "f ? g[x]"              ~== 'PatternTest('f, 'g)('x)
+            "(f + g)[x]"            ~== 'Plus('f, 'g)('x)
+            "(f + g)[x]^h[a, b]"    ~== 'Power('Plus('f, 'g)('x), 'h('a, 'b))
         }
 
         "Parse derivatives (Lagrange's notation): f'''[t]" in {
@@ -539,7 +539,7 @@ class MathematicaParserSuite extends Specification {
             "f + g'"                ~== 'Plus('f, 'Derivative(1)('g))
             "f g'"                  ~== 'Times('f, 'Derivative(1)('g))
             "f^g'"                  ~== 'Power('f, 'Derivative(1)('g))
-            "f[t]'"                 ~== 'Derivative(1)(Eval('f, 't))
+            "f[t]'"                 ~== 'Derivative(1)('f('t))
             "f!'"                   ~== 'Derivative(1)('Factorial('f))
             "f[[0]]'"               ~== 'Derivative(1)('Part('f, 0))
             "f?g'"                  ~== 'Derivative(1)('PatternTest('f, 'g))
@@ -558,8 +558,8 @@ class MathematicaParserSuite extends Specification {
 
             "x!++"                  ~== 'Increment('Factorial('x))
             "x++!"                  ~== 'Factorial('Increment('x))
-            "x[0]++"                ~== 'Increment(Eval('x, 0))
-            "x++[0]"                ~== Eval('Increment('x), 0)
+            "x[0]++"                ~== 'Increment('x(0))
+            "x++[0]"                ~== 'Increment('x)(0)
             "x[[1]]++"              ~== 'Increment('Part('x, 1))
             "x++[[1]]"              ~== 'Part('Increment('x), 1)
             "x'++"                  ~== 'Increment('Derivative(1)('x))
@@ -597,16 +597,14 @@ class MathematicaParserSuite extends Specification {
         "Parse real life examples" in {
             "DSolve[{y'[x] + y[x] == a Sin[x], y[0] == 0}, y, x]; FullSimplify[y''[x] + y[x]^2 /. %]" ~==
                 'CompoundExpression(
-                    Eval(
-                        'DSolve,
+                    'DSolve(
                         'List(
                             'Equal(
                                 'Plus('Derivative(1)('y)('x), Eval('y, 'x)),
                                 'Times('a, Eval('Sin, 'x))),
                             'Equal(Eval('y, 0), 0)),
                         'y, 'x),
-                    Eval(
-                        'FullSimplify,
+                    'FullSimplify(
                         'ReplaceAll(
                             'Plus(
                                 'Derivative(2)('y)('x),

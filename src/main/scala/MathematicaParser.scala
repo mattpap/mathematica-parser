@@ -307,9 +307,9 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
 
     lazy val postfix: ExprParser = log(postfixExpr ~ rep1(derivOp | partOp | evalOp | factorialOp | postIncDecOp))("postfix") ^^ {
         case expr ~ ops => ops.foldLeft(expr) {
-            case (expr, DerivOp(n)) => Eval('Derivative(n), expr)
+            case (expr, DerivOp(n)) => 'Derivative(n)(expr)
             case (expr, PartOp(indices @ _*)) => 'Part(expr +: indices: _*)
-            case (head, EvalOp(args @ _*)) => Eval(head, args: _*)
+            case (head, EvalOp(args @ _*)) => head(args: _*)
             case (expr, FactorialOp) => 'Factorial(expr)
             case (expr, Factorial2Op) => 'Factorial2(expr)
             case (expr, DecrementOp) => 'Decrement(expr)
