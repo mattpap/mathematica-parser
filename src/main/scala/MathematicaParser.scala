@@ -1,97 +1,15 @@
 package org.sympy.parsing.mathematica
 
 import java.io.File
-import scala.io.Source
 
 import scala.annotation.tailrec
 import scala.util.matching.Regex
 
-import scala.util.parsing.combinator._
-import scala.util.parsing.input.{Positional,Position}
+import scala.util.parsing.combinator.{RegexParsers,PackratParsers}
+import scala.util.parsing.input.Position
 
-sealed trait Expr {
-    def toPrettyForm: String
-
-    def apply(exprs: Expr*): Eval = Eval(this, exprs: _*)
-}
-
-case class Sym(name: String) extends Expr {
-    def toPrettyForm = name
-}
-
-case class Num(value: String) extends Expr {
-    def toPrettyForm = value
-}
-
-case class Str(value: String) extends Expr {
-    def toPrettyForm = "\"%s\"".format(value.replace("\"", "\\\\\""))
-}
-
-case class Eval(head: Expr, args: Expr*) extends Expr {
-    def toPrettyForm = {
-        val head = this.head.toPrettyForm
-        val args = this.args.map(_.toPrettyForm).mkString(", ")
-        s"$head[$args]"
-    }
-
-    override def toString: String = {
-        val args = this.args.map(_.toString).mkString(", ")
-        s"Eval($head, $args)"
-    }
-}
-
-object Implicits {
-    implicit def intToExpr(value: Int): Expr = Num(value.toString)
-    implicit def doubleToExpr(value: Double): Expr = Num(value.toString)
-    implicit def stringToExpr(value: String): Expr = Str(value)
-    implicit def symbolToExpr(value: Symbol): Expr = Sym(value.name)
-    implicit def booleanToExpr(value: Boolean): Expr = if (value) Sym("True") else Sym("False")
-}
-
-trait ExtraParsers { self: Parsers =>
-    def notFollowedBy[T](p: => Parser[T], elems: Elem*): Parser[T] = Parser { in =>
-        p(in) match {
-            case success @ Success(_, rest) =>
-                if (rest.atEnd) success
-                else {
-                    elems.find(rest.first == _) match {
-                        case None =>
-                            success
-                        case Some(elem) =>
-                            Failure(s"`$elem' not allowed in this context", rest)
-                    }
-                }
-            case error => error
-        }
-    }
-
-    protected val loggingEnabled: Boolean = false
-
-    override def log[T](p: => Parser[T])(name: String): Parser[T] = Parser { in =>
-        if (loggingEnabled) println(s"trying $name at $in")
-        val result = p(in)
-        if (loggingEnabled) println(s"$name --> $result")
-        result
-    }
-}
-
-class MathematicaParser extends RegexParsers with PackratParsers with ExtraParsers {
+class MathematicaParser extends RegexParsers with PackratParsers with ExtraParsers with ExtraRegexParsers {
     protected override val whiteSpace = """(\s|(?m)\(\*(\*(?!/)|[^*])*\*\))+""".r
-
-    def regexMatch(r: Regex): Parser[Regex.Match] = new Parser[Regex.Match] {
-        def apply(in: Input) = {
-            val source = in.source
-            val offset = in.offset
-            val start = handleWhiteSpace(source, offset)
-            (r findPrefixMatchOf (source.subSequence(start, source.length))) match {
-                case Some(matched) =>
-                    Success(matched, in.drop(start + matched.end - offset))
-                case None =>
-                    val found = if (start == source.length()) "end of source" else "`" + source.charAt(start) + "'"
-                    Failure("string matching regex `" + r + "' expected but " + found + " found", in.drop(start - offset))
-            }
-        }
-    }
 
     type ExprParser = PackratParser[Expr]
 
@@ -104,10 +22,10 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
     lazy val pattern: ExprParser =
         log(symbolBlankWithHead | symbolBlank | symbol | blankWithHead | blank)("pattern")
 
-    protected def buildBlank(underscores: String)(args: Expr*) = underscores.length match {
-        case 1 => 'Blank(args: _*)
-        case 2 => 'BlankSequence(args: _*)
-        case 3 => 'BlankNullSequence(args: _*)
+    protected def buildBlank(underscores: String): Expr = underscores.length match {
+        case 1 => 'Blank
+        case 2 => 'BlankSequence
+        case 3 => 'BlankNullSequence
     }
 
     lazy val blank: ExprParser = regexMatch("(_{1,3})".r) ^^ {
@@ -154,17 +72,14 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         case "{" ~ elems ~ "}" => 'List(elems: _*)
     }
 
-    def rules(n: Int = 0): ExprParser =
-        precedence.drop(n).reduce(_ | _)
-
-    def rulesFrom(p: ExprParser): ExprParser =
+    protected def rulesFrom(p: ExprParser): ExprParser =
         precedence.dropWhile(p != _).reduce(_ | _)
 
-    def rulesFrom(p: ExprParser, drop: ExprParser): ExprParser =
+    protected def rulesFrom(p: ExprParser, drop: ExprParser): ExprParser =
         precedence.dropWhile(p != _).filterNot(_ == drop).reduce(_ | _)
 
     // Precedence in increasing order:
-    val precedence: List[ExprParser] =
+    protected val precedence: List[ExprParser] =
         compound  :: // infix, flat  :  ;
         assign    :: // infix, right :  = := += -= *= /=
         func      :: // postfix      :  &
@@ -188,7 +103,7 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         tightest  ::
         Nil
 
-    lazy val expr: ExprParser = log(rules())("precedence")
+    lazy val expr: ExprParser = log(precedence.reduce(_ | _))("precedence")
 
     lazy val compound: ExprParser = log(complexCompound | simpleCompound)("compound")
     lazy val semicolon: PackratParser[String] = notFollowedBy(";", ';')
@@ -363,14 +278,14 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
     lazy val expLhsExpr: ExprParser = rulesFrom(postfix)
     lazy val expRhsExpr: ExprParser = neg | expLhsExpr
 
-    sealed trait PostfixOp
-    case class DerivOp(n: Int) extends PostfixOp
-    case class PartOp(args: Expr*) extends PostfixOp
-    case class EvalOp(args: Expr*) extends PostfixOp
-    case object FactorialOp extends PostfixOp
-    case object Factorial2Op extends PostfixOp
-    case object DecrementOp extends PostfixOp
-    case object IncrementOp extends PostfixOp
+    protected sealed trait PostfixOp
+    protected case class DerivOp(n: Int) extends PostfixOp
+    protected case class PartOp(args: Expr*) extends PostfixOp
+    protected case class EvalOp(args: Expr*) extends PostfixOp
+    protected case object FactorialOp extends PostfixOp
+    protected case object Factorial2Op extends PostfixOp
+    protected case object DecrementOp extends PostfixOp
+    protected case object IncrementOp extends PostfixOp
 
     lazy val derivOp: PackratParser[PostfixOp] = "'+".r ^^ {
         case ticks => DerivOp(ticks.length)
@@ -446,20 +361,6 @@ object MathematicaParser {
 
     def parse(source: File): ParseOutput =
         parse(FileUtils.readFromFile(source), source.getPath)
-}
-
-object FileUtils {
-    def readFromFile(file: File): String =
-        Source.fromFile(file).mkString("")
-}
-
-object TimeUtils {
-    def timed[T](code: => T): (T, Long) = {
-        val start = System.currentTimeMillis
-        val result = code
-        val end = System.currentTimeMillis
-        (result, end - start)
-    }
 }
 
 object Main extends App {
