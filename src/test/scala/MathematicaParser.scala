@@ -609,6 +609,15 @@ class MathematicaParserSuite extends Specification {
             "f @@ {1, 2, 3, 4}"     ~== 'Apply('f, 'List(1, 2, 3, 4))
         }
 
+        "Parse postfix evaluation operator: x // f" in {
+            "x // f"                ~== 'f('x)
+            "x // f // g"           ~== 'g('f('x))
+
+            "x = y // f"            ~== 'Set('x, 'f('y))
+            "x /. y // f"           ~== 'f('ReplaceAll('x, 'y))
+            "x& // y&"              ~== 'Function('y)('Function('x))
+        }
+
         "Parse real life examples" in {
             "DSolve[{y'[x] + y[x] == a Sin[x], y[0] == 0}, y, x]; FullSimplify[y''[x] + y[x]^2 /. %]" ~==
                 'CompoundExpression(

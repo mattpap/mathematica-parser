@@ -82,6 +82,7 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
     protected val precedence: List[ExprParser] =
         compound  :: // infix, flat  :  ;
         assign    :: // infix, right :  = := += -= *= /=
+        aply      :: // infix, left  :  //
         func      :: // postfix      :  &
         replace   :: // infix, left  :  /.
         rule      :: // infix, right :  -> :>
@@ -127,7 +128,12 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         case lhs ~ "*=" ~ rhs => 'TimesBy(lhs, rhs)
         case lhs ~ "/=" ~ rhs => 'DivideBy(lhs, rhs)
     }
-    lazy val assignExpr: ExprParser = rulesFrom(func)
+    lazy val assignExpr: ExprParser = rulesFrom(aply)
+
+    lazy val aply: ExprParser = log((aply | aplyExpr) ~ "//" ~ aplyExpr)("aply") ^^ {
+        case lhs ~ _ ~ rhs => rhs(lhs)
+    }
+    lazy val aplyExpr: ExprParser = rulesFrom(func)
 
     lazy val func: ExprParser = log((func | funcExpr) ~ notFollowedBy("&", '&'))("func") ^^ {
         case expr ~ _ => 'Function(expr)
