@@ -27,110 +27,25 @@ case class Str(value: String) extends Expr {
     def toPrettyForm = "\"%s\"".format(value.replace("\"", "\\\\\""))
 }
 
-sealed trait EvalLike extends Expr {
-    val head: Expr
-    val args: Seq[Expr]
-
+case class Eval(head: Expr, args: Expr*) extends Expr {
     def toPrettyForm = {
         val head = this.head.toPrettyForm
         val args = this.args.map(_.toPrettyForm).mkString(", ")
         s"$head[$args]"
     }
-}
-
-case class Eval(head: Expr, args: Expr*) extends EvalLike {
-    override def toString: String = {
-        val name = productPrefix
-        val args = this.args.map(_.toString).mkString(", ")
-        s"$name($head, $args)"
-    }
-}
-
-sealed trait Builtin extends EvalLike with scala.Product {
-    override val head: Sym = Sym(productPrefix)
 
     override def toString: String = {
-        val head = this.head.name
         val args = this.args.map(_.toString).mkString(", ")
-        s"$head($args)"
+        s"Eval($head, $args)"
     }
-}
-
-sealed trait Singleton extends Builtin {
-    final val args: Seq[Expr] = Nil
-
-    override def toPrettyForm = head.name
-    override def toString = head.name
-}
-
-object Builtins {
-    case class CompoundExpression(args: Expr*) extends Builtin
-    case class Set(args: Expr*) extends Builtin
-    case class SetDelayed(args: Expr*) extends Builtin
-    case class AddTo(args: Expr*) extends Builtin
-    case class SubtractFrom(args: Expr*) extends Builtin
-    case class TimesBy(args: Expr*) extends Builtin
-    case class DivideBy(args: Expr*) extends Builtin
-    case class ReplaceAll(args: Expr*) extends Builtin
-    case class Rule(args: Expr*) extends Builtin
-    case class DelayedRule(args: Expr*) extends Builtin
-    case class Or(args: Expr*) extends Builtin
-    case class And(args: Expr*) extends Builtin
-    case class Not(args: Expr*) extends Builtin
-    case class SameQ(args: Expr*) extends Builtin
-    case class UnsameQ(args: Expr*) extends Builtin
-    case class Equal(args: Expr*) extends Builtin
-    case class Unequal(args: Expr*) extends Builtin
-    case class LessEqual(args: Expr*) extends Builtin
-    case class Less(args: Expr*) extends Builtin
-    case class GreaterEqual(args: Expr*) extends Builtin
-    case class Greater(args: Expr*) extends Builtin
-    case class Inequality(args: Expr*) extends Builtin
-    case class Plus(args: Expr*) extends Builtin
-    case class Subtract(args: Expr*) extends Builtin
-    case class Times(args: Expr*) extends Builtin
-    case class Divide(args: Expr*) extends Builtin
-    case class Power(args: Expr*) extends Builtin
-    case class List(args: Expr*) extends Builtin
-    case class Span(args: Expr*) extends Builtin
-    case class Part(args: Expr*) extends Builtin
-    case class Exp(args: Expr*) extends Builtin
-    case class Factorial(args: Expr*) extends Builtin
-    case class Factorial2(args: Expr*) extends Builtin
-    case class Out(args: Expr*) extends Builtin
-    case class Slot(args: Expr*) extends Builtin
-    case class SlotSequence(args: Expr*) extends Builtin
-    case class Pattern(args: Expr*) extends Builtin
-    case class Blank(args: Expr*) extends Builtin
-    case class BlankSequence(args: Expr*) extends Builtin
-    case class BlankNullSequence(args: Expr*) extends Builtin
-    case class PatternTest(args: Expr*) extends Builtin
-    case class Condition(args: Expr*) extends Builtin
-    case class Increment(args: Expr*) extends Builtin
-    case class PreIncrement(args: Expr*) extends Builtin
-    case class Decrement(args: Expr*) extends Builtin
-    case class PreDecrement(args: Expr*) extends Builtin
-    case class Derivative(args: Expr*) extends Builtin
-    case class Dot(args: Expr*) extends Builtin
-    case class Function(args: Expr*) extends Builtin
-    case class Repeated(args: Expr*) extends Builtin
-    case class RepeatedNull(args: Expr*) extends Builtin
-}
-
-object Singletons {
-    case object All extends Singleton
-    case object Null extends Singleton
-    case object True extends Singleton
-    case object False extends Singleton
 }
 
 object Implicits {
-    implicit def intToNum(value: Int): Expr = Num(value.toString)
-    implicit def doubleToNum(value: Double): Expr = Num(value.toString)
-    implicit def stringToStr(value: String): Expr = Str(value)
-    implicit def symbolToSym(value: Symbol): Expr = Sym(value.name)
-    implicit def booleanToBoolean(value: Boolean): Expr =
-        if (value) Singletons.True else Singletons.False
+    implicit def intToExpr(value: Int): Expr = Num(value.toString)
+    implicit def doubleToExpr(value: Double): Expr = Num(value.toString)
+    implicit def stringToExpr(value: String): Expr = Str(value)
+    implicit def symbolToExpr(value: Symbol): Expr = Sym(value.name)
+    implicit def booleanToExpr(value: Boolean): Expr = if (value) Sym("True") else Sym("False")
 }
 
 trait ExtraParsers { self: Parsers =>
@@ -190,9 +105,9 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         log(symbolBlankWithHead | symbolBlank | symbol | blankWithHead | blank)("pattern")
 
     protected def buildBlank(underscores: String)(args: Expr*) = underscores.length match {
-        case 1 => Builtins.Blank(args: _*)
-        case 2 => Builtins.BlankSequence(args: _*)
-        case 3 => Builtins.BlankNullSequence(args: _*)
+        case 1 => 'Blank(args: _*)
+        case 2 => 'BlankSequence(args: _*)
+        case 3 => 'BlankNullSequence(args: _*)
     }
 
     lazy val blank: ExprParser = regexMatch("(_{1,3})".r) ^^ {
@@ -205,10 +120,10 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         case Regex.Groups(name) => Sym(name)
     }
     lazy val symbolBlank: ExprParser = regexMatch(s"($name)(_{1,3})".r) ^^ {
-        case Regex.Groups(name, underscores) => Builtins.Pattern(Sym(name), buildBlank(underscores)())
+        case Regex.Groups(name, underscores) => 'Pattern(Sym(name), buildBlank(underscores)())
     }
     lazy val symbolBlankWithHead: ExprParser = regexMatch(s"($name)(_{1,3})($name)".r) ^^ {
-        case Regex.Groups(name, underscores, head) => Builtins.Pattern(Sym(name), buildBlank(underscores)(Sym(head)))
+        case Regex.Groups(name, underscores, head) => 'Pattern(Sym(name), buildBlank(underscores)(Sym(head)))
     }
 
     lazy val number: PackratParser[Num] = log("""(\d+\.\d*|\d*\.\d+|\d+)([eE][+-]?\d+)?""".r)("number") ^^ {
@@ -221,22 +136,22 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
 
     lazy val out: ExprParser = outNumber | outClassic
     lazy val outNumber: ExprParser = "%\\d+".r ^^ {
-        case value => Builtins.Out(Num(value.stripPrefix("%")))
+        case value => 'Out(Num(value.stripPrefix("%")))
     }
     lazy val outClassic: ExprParser = "%+".r ^^ {
-        case "%"   => Builtins.Out()
-        case value => Builtins.Out(Num(s"-${value.length}"))
+        case "%"   => 'Out()
+        case value => 'Out(Num(s"-${value.length}"))
     }
 
     lazy val slot: ExprParser = regexMatch("(#{1,2})(\\d*)".r) ^^ {
-        case Regex.Groups("#",  "")    => Builtins.Slot(1)
-        case Regex.Groups("#",  index) => Builtins.Slot(index.toInt)
-        case Regex.Groups("##", "")    => Builtins.SlotSequence(1)
-        case Regex.Groups("##", index) => Builtins.SlotSequence(index.toInt)
+        case Regex.Groups("#",  "")    => 'Slot(1)
+        case Regex.Groups("#",  index) => 'Slot(index.toInt)
+        case Regex.Groups("##", "")    => 'SlotSequence(1)
+        case Regex.Groups("##", index) => 'SlotSequence(index.toInt)
     }
 
     lazy val list: ExprParser = "{" ~ repsep(expr, ",") ~ "}" ^^ {
-        case "{" ~ elems ~ "}" => Builtins.List(elems: _*)
+        case "{" ~ elems ~ "}" => 'List(elems: _*)
     }
 
     def rules(n: Int = 0): ExprParser =
@@ -279,64 +194,64 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
     lazy val semicolon: PackratParser[String] = notFollowedBy(";", ';')
     lazy val complexCompound: ExprParser = compoundExpr ~ semicolon ~ rep1sep(compoundExpr, semicolon) ~ opt(semicolon) ^^ {
         case elem ~ _ ~ elems ~ None =>
-            Builtins.CompoundExpression(elem :: elems: _*)
+            'CompoundExpression(elem :: elems: _*)
         case elem ~ _ ~ elems ~ _ =>
-            Builtins.CompoundExpression((elem :: elems) :+ Singletons.Null: _*)
+            'CompoundExpression(elem +: elems :+ Sym("Null"): _*)
     }
     lazy val simpleCompound: ExprParser = compoundExpr ~ semicolon ^^ {
-        case elem ~ _ => Builtins.CompoundExpression(elem, Singletons.Null)
+        case elem ~ _ => 'CompoundExpression(elem, Sym("Null"))
     }
     lazy val compoundExpr: ExprParser = rulesFrom(assign)
 
     lazy val assign: ExprParser = log(assignExpr ~ ("=" | ":=" | "+=" | "-=" | "*=" | "/=") ~ (assign | assignExpr))("assign") ^^ {
-        case lhs ~  "=" ~ rhs => Builtins.Set(lhs, rhs)
-        case lhs ~ ":=" ~ rhs => Builtins.SetDelayed(lhs, rhs)
-        case lhs ~ "+=" ~ rhs => Builtins.AddTo(lhs, rhs)
-        case lhs ~ "-=" ~ rhs => Builtins.SubtractFrom(lhs, rhs)
-        case lhs ~ "*=" ~ rhs => Builtins.TimesBy(lhs, rhs)
-        case lhs ~ "/=" ~ rhs => Builtins.DivideBy(lhs, rhs)
+        case lhs ~  "=" ~ rhs => 'Set(lhs, rhs)
+        case lhs ~ ":=" ~ rhs => 'SetDelayed(lhs, rhs)
+        case lhs ~ "+=" ~ rhs => 'AddTo(lhs, rhs)
+        case lhs ~ "-=" ~ rhs => 'SubtractFrom(lhs, rhs)
+        case lhs ~ "*=" ~ rhs => 'TimesBy(lhs, rhs)
+        case lhs ~ "/=" ~ rhs => 'DivideBy(lhs, rhs)
     }
     lazy val assignExpr: ExprParser = rulesFrom(func)
 
     lazy val func: ExprParser = log((func | funcExpr) ~ notFollowedBy("&", '&'))("func") ^^ {
-        case expr ~ _ => Builtins.Function(expr)
+        case expr ~ _ => 'Function(expr)
     }
     lazy val funcExpr: ExprParser = rulesFrom(replace)
 
     lazy val replace: ExprParser = log((replace | replaceExpr) ~ "/." ~ replaceExpr)("replace") ^^ {
-        case lhs ~ _ ~ rhs => Builtins.ReplaceAll(lhs, rhs)
+        case lhs ~ _ ~ rhs => 'ReplaceAll(lhs, rhs)
     }
     lazy val replaceExpr: ExprParser = rulesFrom(rule)
 
     lazy val rule: ExprParser = log(ruleExpr ~ ("->" | ":>") ~ (rule | ruleExpr))("rule") ^^ {
-        case lhs ~ "->" ~ rhs => Builtins.Rule(lhs, rhs)
-        case lhs ~ ":>" ~ rhs => Builtins.DelayedRule(lhs, rhs)
+        case lhs ~ "->" ~ rhs => 'Rule(lhs, rhs)
+        case lhs ~ ":>" ~ rhs => 'DelayedRule(lhs, rhs)
     }
     lazy val ruleExpr: ExprParser = rulesFrom(cond)
 
     lazy val cond: ExprParser = log((cond | condExpr) ~ "/;" ~ condExpr)("cond") ^^ {
-        case lhs ~ _ ~ rhs => Builtins.Condition(lhs, rhs)
+        case lhs ~ _ ~ rhs => 'Condition(lhs, rhs)
     }
     lazy val condExpr: ExprParser = rulesFrom(repeated)
 
     lazy val repeated: ExprParser = log((repeated | repeatedExpr) ~ ("..." | ".."))("repeated") ^^ {
-        case expr ~ ".."  => Builtins.Repeated(expr)
-        case expr ~ "..." => Builtins.RepeatedNull(expr)
+        case expr ~ ".."  => 'Repeated(expr)
+        case expr ~ "..." => 'RepeatedNull(expr)
     }
     lazy val repeatedExpr: ExprParser = rulesFrom(or)
 
     lazy val or: ExprParser = log(orExpr ~ rep1("||" ~> orExpr))("or") ^^ {
-        case head ~ tail => Builtins.Or(head :: tail: _*)
+        case head ~ tail => 'Or(head :: tail: _*)
     }
     lazy val orExpr: ExprParser = rulesFrom(and)
 
     lazy val and: ExprParser = log(andExpr ~ rep1("&&" ~> andExpr))("and") ^^ {
-        case head ~ tail => Builtins.And(head :: tail: _*)
+        case head ~ tail => 'And(head :: tail: _*)
     }
     lazy val andExpr: ExprParser = rulesFrom(not)
 
     lazy val not: ExprParser = log(notFollowedBy("!", '=') ~ (not | notExpr))("not") ^^ {
-        case _ ~ expr => Builtins.Not(expr)
+        case _ ~ expr => 'Not(expr)
     }
     lazy val notExpr: ExprParser = rulesFrom(same)
 
@@ -353,8 +268,8 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
                         val (head, tail) = rest.span(_.op == op)
                         val args = init :: head.map(_.expr)
                         val result = (op match {
-                            case "===" => Builtins.SameQ
-                            case "=!=" => Builtins.UnsameQ
+                            case "===" => 'SameQ
+                            case "=!=" => 'UnsameQ
                         })(args: _*)
                         buildAST(result, tail)
                 }
@@ -364,14 +279,14 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
     }
     lazy val sameExpr: ExprParser = rulesFrom(cmp)
 
-    protected def evalCmpOp(op: String, args: Expr*): Builtin = (op match {
-        case "==" => Builtins.Equal
-        case "!=" => Builtins.Unequal
-        case "<=" => Builtins.LessEqual
-        case "<"  => Builtins.Less
-        case ">=" => Builtins.GreaterEqual
-        case ">"  => Builtins.Greater
-    })(args: _*)
+    protected def getCmpOp(op: String): Expr = op match {
+        case "==" => 'Equal
+        case "!=" => 'Unequal
+        case "<=" => 'LessEqual
+        case "<"  => 'Less
+        case ">=" => 'GreaterEqual
+        case ">"  => 'Greater
+    }
 
     lazy val cmp: ExprParser = log(cmpExpr ~ rep1(("==" | "!="  | "<=" | "<" | ">=" | ">") ~ cmpExpr))("cmp") ^^ {
         case head ~ tail =>
@@ -380,26 +295,26 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
                     val args = head :: tail.collect {
                         case _ ~ expr => expr
                     }
-                    evalCmpOp(op, args: _*)
+                    getCmpOp(op)(args: _*)
                 case _ =>
                     val args = head :: tail.flatMap {
-                        case op ~ expr => Seq(evalCmpOp(op), expr)
+                        case op ~ expr => Seq(getCmpOp(op), expr)
                     }
-                    Builtins.Inequality(args: _*)
+                    'Inequality(args: _*)
             }
     }
     lazy val cmpExpr: ExprParser = rulesFrom(span)
 
     lazy val span: ExprParser = log(spanParser)("span")
     lazy val spanParser: ExprParser =
-        spanExpr ~ ";;" ~ spanExpr ~ ";;" ~ spanExpr ^^ { case i ~ _ ~ j ~ _ ~ k => Builtins.Span(i, j, k)              } |
-        spanExpr ~ ";;"            ~ ";;" ~ spanExpr ^^ { case i ~ _     ~ _ ~ k => Builtins.Span(i, Singletons.All, k) } |
-                   ";;" ~ spanExpr ~ ";;" ~ spanExpr ^^ { case     _ ~ j ~ _ ~ k => Builtins.Span(1, j, k)              } |
-                   ";;"            ~ ";;" ~ spanExpr ^^ { case     _     ~ _ ~ k => Builtins.Span(1, Singletons.All, k) } |
-        spanExpr ~ ";;" ~ spanExpr                   ^^ { case i ~ _ ~ j         => Builtins.Span(i, j)                 } |
-        spanExpr ~ ";;"                              ^^ { case i ~ _             => Builtins.Span(i, Singletons.All)    } |
-                   ";;" ~ spanExpr                   ^^ { case     _ ~ j         => Builtins.Span(1, j)                 } |
-                   ";;"                              ^^ { case     _             => Builtins.Span(1, Singletons.All)    }
+        spanExpr ~ ";;" ~ spanExpr ~ ";;" ~ spanExpr ^^ { case i ~ _ ~ j ~ _ ~ k => 'Span(i, j, k)    } |
+        spanExpr ~ ";;"            ~ ";;" ~ spanExpr ^^ { case i ~ _     ~ _ ~ k => 'Span(i, 'All, k) } |
+                   ";;" ~ spanExpr ~ ";;" ~ spanExpr ^^ { case     _ ~ j ~ _ ~ k => 'Span(1, j, k)    } |
+                   ";;"            ~ ";;" ~ spanExpr ^^ { case     _     ~ _ ~ k => 'Span(1, 'All, k) } |
+        spanExpr ~ ";;" ~ spanExpr                   ^^ { case i ~ _ ~ j         => 'Span(i, j)       } |
+        spanExpr ~ ";;"                              ^^ { case i ~ _             => 'Span(i, 'All)    } |
+                   ";;" ~ spanExpr                   ^^ { case     _ ~ j         => 'Span(1, j)       } |
+                   ";;"                              ^^ { case     _             => 'Span(1, 'All)    }
     lazy val spanExpr: ExprParser = rulesFrom(add)
 
     lazy val add: ExprParser = log(addExpr ~ rep1(("+" | "-") ~ addExpr))("add") ^^ {
@@ -407,9 +322,9 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
             val args = head :: tail.map {
                 case "+" ~ expr       => expr
                 case "-" ~ Num(value) => Num(s"-$value")
-                case "-" ~ expr       => Builtins.Times(-1, expr)
+                case "-" ~ expr       => 'Times(-1, expr)
             }
-            Builtins.Plus(args: _*)
+            'Plus(args: _*)
     }
     lazy val addExpr: ExprParser = rulesFrom(mul)
 
@@ -417,33 +332,33 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
     lazy val mulImplied: ExprParser = mulExpr ~ rep1(mulImpliedRhsExpr) ^^ {
         case head ~ tail =>
             val args = head :: tail
-            Builtins.Times(args: _*)
+            'Times(args: _*)
     }
     lazy val mulExplicit: ExprParser = mulExpr ~ rep1(("*" | notFollowedBy("/", ';', '.')) ~ mulExpr) ^^ {
         case head ~ tail =>
             val args = head :: tail.map {
                 case "*" ~ expr => expr
-                case "/" ~ expr => Builtins.Power(expr, -1)
+                case "/" ~ expr => 'Power(expr, -1)
             }
-            Builtins.Times(args: _*)
+            'Times(args: _*)
     }
     // TODO: what about `not'?
     lazy val mulImpliedRhsExpr: ExprParser = rulesFrom(dot, drop=neg)
     lazy val mulExpr: ExprParser = rulesFrom(dot)
 
     lazy val dot: ExprParser = log(dotExpr ~ rep1("." ~> dotExpr))("dot") ^^ {
-        case head ~ tail => Builtins.Dot(head :: tail: _*)
+        case head ~ tail => 'Dot(head :: tail: _*)
     }
     lazy val dotExpr: ExprParser = rulesFrom(neg)
 
     lazy val neg: ExprParser = log("-" ~ (neg | negExpr))("neg") ^^ {
         case _ ~ Num(value) => Num(s"-$value")
-        case _ ~ expr => Builtins.Times(-1, expr)
+        case _ ~ expr => 'Times(-1, expr)
     }
     lazy val negExpr: ExprParser = rulesFrom(exp)
 
     lazy val exp: ExprParser = log(expLhsExpr ~ "^" ~ (exp | expRhsExpr))("exp") ^^ {
-        case lhs ~ _ ~ rhs => Builtins.Power(lhs, rhs)
+        case lhs ~ _ ~ rhs => 'Power(lhs, rhs)
     }
     lazy val expLhsExpr: ExprParser = rulesFrom(postfix)
     lazy val expRhsExpr: ExprParser = neg | expLhsExpr
@@ -477,21 +392,19 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
 
     lazy val postfix: ExprParser = log(postfixExpr ~ rep1(derivOp | partOp | evalOp | factorialOp | postIncDecOp))("postfix") ^^ {
         case expr ~ ops => ops.foldLeft(expr) {
-            case (expr, DerivOp(n)) => Eval(Builtins.Derivative(n), expr)
-            case (expr, PartOp(indices @ _*)) => Builtins.Part(expr +: indices: _*)
-            // TODO: this has to be automated (e.g. with reflection)
-            case (Sym("Exp"), EvalOp(args @ _*)) => Builtins.Exp(args: _*)
+            case (expr, DerivOp(n)) => Eval('Derivative(n), expr)
+            case (expr, PartOp(indices @ _*)) => 'Part(expr +: indices: _*)
             case (head, EvalOp(args @ _*)) => Eval(head, args: _*)
-            case (expr, FactorialOp) => Builtins.Factorial(expr)
-            case (expr, Factorial2Op) => Builtins.Factorial2(expr)
-            case (expr, DecrementOp) => Builtins.Decrement(expr)
-            case (expr, IncrementOp) => Builtins.Increment(expr)
+            case (expr, FactorialOp) => 'Factorial(expr)
+            case (expr, Factorial2Op) => 'Factorial2(expr)
+            case (expr, DecrementOp) => 'Decrement(expr)
+            case (expr, IncrementOp) => 'Increment(expr)
         }
     }
     lazy val postfixExpr: ExprParser = rulesFrom(test)
 
     lazy val test: ExprParser = log(testExpr ~ "?" ~ testExpr)("test") ^^ {
-        case lhs ~ _ ~ rhs => Builtins.PatternTest(lhs, rhs)
+        case lhs ~ _ ~ rhs => 'PatternTest(lhs, rhs)
     }
     lazy val testExpr: ExprParser = rulesFrom(tightest)
 
