@@ -618,6 +618,14 @@ class MathematicaParserSuite extends Specification {
             "x& // y&"              ~== 'Function('y)('Function('x))
         }
 
+        "Parse alternatives operator: a | b" in {
+            "a | b"                 ~== 'Alternatives('a, 'b)
+            "a | b | c"             ~== 'Alternatives('a, 'b, 'c)
+            "a | b | c | d"         ~== 'Alternatives('a, 'b, 'c, 'd)
+
+            "{a, b, c} /. a|b -> x" ~== 'ReplaceAll('List('a, 'b, 'c), 'Rule('Alternatives('a, 'b), 'x))
+        }
+
         "Parse real life examples" in {
             "DSolve[{y'[x] + y[x] == a Sin[x], y[0] == 0}, y, x]; FullSimplify[y''[x] + y[x]^2 /. %]" ~==
                 'CompoundExpression(

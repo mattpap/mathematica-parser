@@ -87,6 +87,7 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
         replace   :: // infix, left  :  /.
         rule      :: // infix, right :  -> :>
         cond      :: // infix, left  :  /;
+        alt       :: // infix, flat  :  |
         repeated  :: // postfix      :  .. ...
         or        :: // infix, flat  :  ||
         and       :: // infix, flat  :  &&
@@ -154,7 +155,12 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
     lazy val cond: ExprParser = log((cond | condExpr) ~ "/;" ~ condExpr)("cond") ^^ {
         case lhs ~ _ ~ rhs => 'Condition(lhs, rhs)
     }
-    lazy val condExpr: ExprParser = rulesFrom(repeated)
+    lazy val condExpr: ExprParser = rulesFrom(alt)
+
+    lazy val alt: ExprParser = log(altExpr ~ rep1(notFollowedBy("|", '|') ~> altExpr))("alt") ^^ {
+        case head ~ tail => 'Alternatives(head :: tail: _*)
+    }
+    lazy val altExpr: ExprParser = rulesFrom(repeated)
 
     lazy val repeated: ExprParser = log((repeated | repeatedExpr) ~ ("..." | ".."))("repeated") ^^ {
         case expr ~ ".."  => 'Repeated(expr)
