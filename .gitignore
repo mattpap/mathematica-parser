@@ -1,5 +1,10 @@
 *.sw[opn]
 *~
 
-project/sbt-launch-*.jar
 target/
+/project/sbt-launch-*.jar
+
+/.idea/
+/.idea_modules/
+
+/.ipynb_checkpoints/
