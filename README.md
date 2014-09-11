@@ -1,9 +1,9 @@
 Mathematica Parser
 ==================
 
-A library for parsing Mathematica's programming language written in Scala (JVM). It
-uses parser combinators and packrat parsers from Scala's standard library. Currently
-only a subset of Mathematica's language is supported.
+A library for parsing Mathematica's programming language written in Scala.
+It uses parser combinators and packrat parsers from Scala's standard library.
+Currently only a subset of Mathematica's language is supported.
 
 Supported features
 ------------------
@@ -33,10 +33,10 @@ Run `./sbt`. This can take awhile on the first run, because it has to download
 runner's and project's dependencies (e.g. Scala compiler). Then you can use the
 following commands:
 
-* `compile`   : compile the project
-* `test`      : run tests
-* `console`   : run Scala REPL (imports are done automatically)
-* `run 2 + 2` : parse and pretty print expression `2 + 2`
+* `compile`        : compile the project
+* `test`           : run tests
+* `console`        : run Scala REPL (imports are done automatically)
+* `run -e "2 + 2"` : parse and output full form of the input expression (see `run --help`)
 
 Note that `compile` is automatically invoked by `test` and others if needed.
 

@@ -350,9 +350,7 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
     lazy val mathematica: ExprParser = expr
 }
 
-sealed trait ParseOutput {
-    def toFullForm: String
-}
+sealed trait ParseOutput
 
 case class ParseResult(expr: Expr) extends ParseOutput {
     def toFullForm = expr.toFullForm
@@ -363,8 +361,6 @@ case class ParseError(msg: String, file: String, pos: Position) extends ParseOut
         val fileName = (new java.io.File(file)).getName()
         s"$fileName:$pos failure: $msg\n\n${pos.longString}"
     }
-
-    def toFullForm = message
 }
 
 object MathematicaParser {
@@ -380,21 +376,4 @@ object MathematicaParser {
 
     def parse(source: File): ParseOutput =
         parse(FileUtils.readFromFile(source), source.getPath)
-}
-
-object Main extends App {
-    import MathematicaParser.parse
-
-    args.toList match {
-        case "-f" :: files =>
-            files.map(new java.io.File(_))
-                 .map(parse _)
-                 .map(_.toFullForm)
-                 .foreach(println)
-        case _ :: _        =>
-            val expr = args.mkString(" ")
-            println(parse(expr).toFullForm)
-        case Nil           =>
-            println("Nothing to do.")
-    }
 }

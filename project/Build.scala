@@ -13,8 +13,12 @@ object Dependencies {
         Def.setting { if (!isScala_2_10.value) Seq(moduleID) else Seq.empty }
 
     val parser_combinators = scala_2_11_+("org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.2")
+
     val parboiled2 = "org.parboiled" %% "parboiled" % "2.0.1"
-    val specs2 = "org.specs2" %% "specs2" % "2.4" % "test"
+
+    val scopt = "com.github.scopt" %% "scopt" % "3.2.0"
+
+    val specs2 = "org.specs2" %% "specs2" % "2.4" % Test
 }
 
 object MathematicaParser extends Build {
@@ -75,7 +79,7 @@ object MathematicaParser extends Build {
     import Dependencies._
 
     lazy val mathematicaParserSettings = Defaults.coreDefaultSettings ++ publishSettings ++ Seq(
-        libraryDependencies ++= parser_combinators.value ++ Seq(parboiled2, specs2),
+        libraryDependencies ++= parser_combinators.value ++ Seq(parboiled2, scopt, specs2),
         initialCommands := """import org.refptr.parsing.mathematica._"""
     )
 
