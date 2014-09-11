@@ -5,6 +5,8 @@ A library for parsing Mathematica's programming language written in Scala.
 It uses parser combinators and packrat parsers from Scala's standard library.
 Currently only a subset of Mathematica's language is supported.
 
+[![Build Status][travis]](https://travis-ci.org/mattpap/mathematica-parser)
+
 Supported features
 ------------------
 
@@ -68,4 +70,7 @@ License
 
 Copyright &copy; 2012-2014 by Mateusz Paprocki and contributors.
 
-Published under The MIT License, see LICENSE.
+Published under [The MIT License][license], see LICENSE.
+
+[travis]: https://api.travis-ci.org/mattpap/mathematica-parser.png?branch=master
+[license]: http://www.opensource.org/licenses/mit-license.php
