@@ -351,11 +351,11 @@ class MathematicaParser extends RegexParsers with PackratParsers with ExtraParse
 }
 
 sealed trait ParseOutput {
-    def toPrettyForm: String
+    def toFullForm: String
 }
 
 case class ParseResult(expr: Expr) extends ParseOutput {
-    def toPrettyForm = expr.toPrettyForm
+    def toFullForm = expr.toFullForm
 }
 
 case class ParseError(msg: String, file: String, pos: Position) extends ParseOutput {
@@ -364,7 +364,7 @@ case class ParseError(msg: String, file: String, pos: Position) extends ParseOut
         s"$fileName:$pos failure: $msg\n\n${pos.longString}"
     }
 
-    def toPrettyForm = message
+    def toFullForm = message
 }
 
 object MathematicaParser {
@@ -389,11 +389,11 @@ object Main extends App {
         case "-f" :: files =>
             files.map(new java.io.File(_))
                  .map(parse _)
-                 .map(_.toPrettyForm)
+                 .map(_.toFullForm)
                  .foreach(println)
         case _ :: _        =>
             val expr = args.mkString(" ")
-            println(parse(expr).toPrettyForm)
+            println(parse(expr).toFullForm)
         case Nil           =>
             println("Nothing to do.")
     }

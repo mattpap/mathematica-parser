@@ -1,25 +1,25 @@
 package org.refptr.parsing.mathematica
 
 sealed trait Expr {
-    def toPrettyForm: String
+    def toFullForm: String
     def toLispForm: String
 
     def apply(exprs: Expr*): Eval = Eval(this, exprs: _*)
 }
 
 case class Sym(name: String) extends Expr {
-    def toPrettyForm = name
+    def toFullForm = name
     def toLispForm = '"' + name + '"'
 }
 
 case class Num(value: String) extends Expr {
-    def toPrettyForm = value
+    def toFullForm = value
     def toLispForm = value
 }
 
 case class Str(value: String) extends Expr {
-    def toPrettyForm = '"' + value.replace("\"", "\\\\\"") + '"'
-    def toLispForm = toPrettyForm
+    def toFullForm = '"' + value.replace("\"", "\\\\\"") + '"'
+    def toLispForm = toFullForm
 }
 
 case class Eval(head: Expr, args: Expr*) extends Expr {
@@ -27,8 +27,8 @@ case class Eval(head: Expr, args: Expr*) extends Expr {
         (fn(head), args.map(fn).mkString(", "))
     }
 
-    def toPrettyForm = {
-        val (head, args) = toForm(_.toPrettyForm)
+    def toFullForm = {
+        val (head, args) = toForm(_.toFullForm)
         s"$head[$args]"
     }
 

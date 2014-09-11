@@ -62,12 +62,12 @@ class MathematicaParserSuite extends Specification {
             'Power(1, 2).head === Sym("Power")
         }
 
-        "Allow to pretty print themselves" in {
-            'Plus(1, 2, 3).toPrettyForm === "Plus[1, 2, 3]"
-            'Plus('x, 'y, 'z).toPrettyForm === "Plus[x, y, z]"
-            'Plus(1, 'Power(2, 3)).toPrettyForm === "Plus[1, Power[2, 3]]"
-            'Span(1, 'All).toPrettyForm === "Span[1, All]"
-            'f('x, 'y, 'z).toPrettyForm === "f[x, y, z]"
+        "Produce full form of themselves" in {
+            'Plus(1, 2, 3).toFullForm === "Plus[1, 2, 3]"
+            'Plus('x, 'y, 'z).toFullForm === "Plus[x, y, z]"
+            'Plus(1, 'Power(2, 3)).toFullForm === "Plus[1, Power[2, 3]]"
+            'Span(1, 'All).toFullForm === "Span[1, All]"
+            'f('x, 'y, 'z).toFullForm === "f[x, y, z]"
         }
 
         "Produce readable output from toString" in {
