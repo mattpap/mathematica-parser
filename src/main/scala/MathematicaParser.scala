@@ -383,9 +383,18 @@ object MathematicaParser {
 }
 
 object Main extends App {
-    if (args.length > 0) {
-        println(MathematicaParser.parse(args.mkString(" ")).toPrettyForm)
-    } else {
-        println("Nothing to do.")
+    import MathematicaParser.parse
+
+    args.toList match {
+        case "-f" :: files =>
+            files.map(new java.io.File(_))
+                 .map(parse _)
+                 .map(_.toPrettyForm)
+                 .foreach(println)
+        case _ :: _        =>
+            val expr = args.mkString(" ")
+            println(parse(expr).toPrettyForm)
+        case Nil           =>
+            println("Nothing to do.")
     }
 }
