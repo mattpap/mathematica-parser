@@ -1,4 +1,4 @@
-package org.sympy.parsing.mathematica
+package org.refptr.parsing.mathematica
 
 import java.io.File
 import scala.io.Source

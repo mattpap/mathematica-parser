@@ -1,4 +1,4 @@
-package org.sympy.parsing.mathematica
+package org.refptr.parsing.mathematica
 
 import scala.util.parsing.combinator.{Parsers,RegexParsers}
 import scala.util.matching.Regex

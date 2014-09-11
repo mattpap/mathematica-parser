@@ -1,11 +1,9 @@
-package org.sympy.parsing.mathematica.tests
+package org.refptr.parsing.mathematica
+package tests
 
 import org.specs2.mutable.Specification
 import org.specs2.matcher.ParserMatchers
 import scala.util.parsing.combinator.RegexParsers
-
-import org.sympy.parsing.mathematica.{MathematicaParser,ParseResult,ParseError,ExtraParsers}
-import org.sympy.parsing.mathematica.{Expr,Sym,Num,Str,Eval,Implicits}
 
 class ExtraParsersSuite extends Specification with ParserMatchers {
 

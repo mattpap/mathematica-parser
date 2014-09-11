@@ -46,18 +46,18 @@ Example
 ```
 ~/mathematica-parser$ ./sbt
 [info] Loading project definition from ~/mathematica-parser/project
-[info] Set current project to sympy (in build file:~/mathematica-parser/)
-sympy (sympy)> console
+[info] Set current project to mathematica_parser (in build file:~/mathematica-parser/)
+refptr (mathematica_parser)> console
 [info] Compiling 1 Scala source to ~/mathematica-parser/target/scala-2.10/classes...
 [info] Starting scala interpreter...
 [info]
-import org.sympy.parsing.mathematica._
+import org.refptr.parsing.mathematica._
 Welcome to Scala version 2.10.0-M4 (OpenJDK 64-Bit Server VM, Java 1.6.0_23).
 Type in expressions to have them evaluated.
 Type :help for more information.
 
 scala> MathematicaParser.parse("1 + 2*3")
-res0: org.sympy.parsing.mathematica.ParseOutput = ParseResult(Plus(Num(1), Times(Num(2), Num(3))))
+res0: org.refptr.parsing.mathematica.ParseOutput = ParseResult(Plus(Num(1), Times(Num(2), Num(3))))
 
 scala> res0.toPrettyForm
 res1: String = Plus[1, Times[2, 3]]
@@ -66,6 +66,6 @@ res1: String = Plus[1, Times[2, 3]]
 License
 -------
 
-Copyright &copy; 2012-2013 by Mateusz Paprocki and contributors.
+Copyright &copy; 2012-2014 by Mateusz Paprocki and contributors.
 
-Published under The BSD License, see LICENSE.
+Published under The MIT License, see LICENSE.

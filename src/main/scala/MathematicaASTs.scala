@@ -1,4 +1,4 @@
-package org.sympy.parsing.mathematica
+package org.refptr.parsing.mathematica
 
 sealed trait Expr {
     def toPrettyForm: String
